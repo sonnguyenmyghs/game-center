@@ -128,6 +128,11 @@
       border-color: rgba(108, 92, 231, 0.5);
       color: #c4b5fd;
     }
+    .filter-tab[data-filter="voucher"].active {
+      background: rgba(234, 179, 8, 0.2);
+      border-color: rgba(234, 179, 8, 0.5);
+      color: #fde047;
+    }
 
     /* Count badge on filter tabs */
     .filter-count {
@@ -529,6 +534,9 @@
       <button class="filter-tab" data-filter="general" role="tab" aria-selected="false">
         🕹️ Games <span class="filter-count" id="count-general">28</span>
       </button>
+      <button class="filter-tab" data-filter="voucher" role="tab" aria-selected="false">
+        🏨 Booking Voucher <span class="filter-count" id="count-voucher">19</span>
+      </button>
     </div>
 
     <!-- ── SEASONAL GAMES SECTION ── -->
@@ -537,7 +545,7 @@
     <div class="game-grid" id="grid-events">
 
       <!-- ── TRUNG THU ── -->
-      <a href="gift-box-trungthu/index.html" class="game-card theme-mooncake" data-category="trungthu">
+      <a href="gift-box-trungthu/index.html" class="game-card theme-mooncake" data-category="trungthu" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="event-badge badge-trungthu">🎑 Mid-Autumn</span>
           <span class="icon">🥮</span>
@@ -552,7 +560,7 @@
         </div>
       </a>
 
-      <a href="lucky-wheel-trungthu/index.html" class="game-card theme-lantern" data-category="trungthu">
+      <a href="lucky-wheel-trungthu/index.html" class="game-card theme-lantern" data-category="trungthu" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="event-badge badge-trungthu">🎑 Mid-Autumn</span>
           <span class="icon">🏮</span>
@@ -567,7 +575,7 @@
         </div>
       </a>
 
-      <a href="scratch-card-trungthu/index.html" class="game-card theme-harvest" data-category="trungthu">
+      <a href="scratch-card-trungthu/index.html" class="game-card theme-harvest" data-category="trungthu" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="event-badge badge-trungthu">🎑 Mid-Autumn</span>
           <span class="icon">🌕</span>
@@ -582,7 +590,7 @@
         </div>
       </a>
 
-      <a href="slot-machine-trungthu/index.html" class="game-card theme-mooncake" data-category="trungthu">
+      <a href="slot-machine-trungthu/index.html" class="game-card theme-mooncake" data-category="trungthu" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="event-badge badge-trungthu">🎑 Mid-Autumn</span>
           <span class="icon">🎑</span>
@@ -598,7 +606,7 @@
       </a>
 
       <!-- ── NOEL ── -->
-      <a href="gift-box-noel/index.html" class="game-card theme-xmas-gift" data-category="noel">
+      <a href="gift-box-noel/index.html" class="game-card theme-xmas-gift" data-category="noel" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="event-badge badge-noel">🎄 Christmas</span>
           <span class="icon">🎁</span>
@@ -613,7 +621,7 @@
         </div>
       </a>
 
-      <a href="lucky-wheel-noel/index.html" class="game-card theme-xmas-wheel" data-category="noel">
+      <a href="lucky-wheel-noel/index.html" class="game-card theme-xmas-wheel" data-category="noel" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="event-badge badge-noel">🎄 Christmas</span>
           <span class="icon">🎄</span>
@@ -628,7 +636,7 @@
         </div>
       </a>
 
-      <a href="scratch-card-noel/index.html" class="game-card theme-snowflake" data-category="noel">
+      <a href="scratch-card-noel/index.html" class="game-card theme-snowflake" data-category="noel" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="event-badge badge-noel">🎄 Christmas</span>
           <span class="icon">❄️</span>
@@ -643,7 +651,7 @@
         </div>
       </a>
 
-      <a href="slot-machine-noel/index.html" class="game-card theme-xmas-gift" data-category="noel">
+      <a href="slot-machine-noel/index.html" class="game-card theme-xmas-gift" data-category="noel" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="event-badge badge-noel">🎄 Christmas</span>
           <span class="icon">🎰</span>
@@ -659,7 +667,7 @@
       </a>
 
       <!-- ── TẾT ── -->
-      <a href="gift-box-tet/index.html" class="game-card theme-hongbao" data-category="tet">
+      <a href="gift-box-tet/index.html" class="game-card theme-hongbao" data-category="tet" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="event-badge badge-tet">🧧 Lunar New Year</span>
           <span class="icon">🧧</span>
@@ -674,7 +682,7 @@
         </div>
       </a>
 
-      <a href="lucky-wheel-tet/index.html" class="game-card theme-hoamain" data-category="tet">
+      <a href="lucky-wheel-tet/index.html" class="game-card theme-hoamain" data-category="tet" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="event-badge badge-tet">🧧 Lunar New Year</span>
           <span class="icon">🌸</span>
@@ -689,7 +697,7 @@
         </div>
       </a>
 
-      <a href="scratch-card-tet/index.html" class="game-card theme-blossom" data-category="tet">
+      <a href="scratch-card-tet/index.html" class="game-card theme-blossom" data-category="tet" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="event-badge badge-tet">🧧 Lunar New Year</span>
           <span class="icon">🎆</span>
@@ -704,7 +712,7 @@
         </div>
       </a>
 
-      <a href="slot-machine-tet/index.html" class="game-card theme-hongbao" data-category="tet">
+      <a href="slot-machine-tet/index.html" class="game-card theme-hongbao" data-category="tet" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="event-badge badge-tet">🧧 Lunar New Year</span>
           <span class="icon">🐉</span>
@@ -1020,7 +1028,7 @@
         </div>
       </a>
 
-      <a href="lucky-wheel/index.html" class="game-card theme-rainbow" data-category="general">
+      <a href="lucky-wheel/index.html" class="game-card theme-rainbow" data-category="general" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="icon">🎡</span>
         </div>
@@ -1034,7 +1042,7 @@
         </div>
       </a>
 
-      <a href="scratch-card/index.html" class="game-card theme-neon" data-category="general">
+      <a href="scratch-card/index.html" class="game-card theme-neon" data-category="general" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="icon">🎟️</span>
         </div>
@@ -1048,7 +1056,7 @@
         </div>
       </a>
 
-      <a href="gift-box/index.html" class="game-card theme-bronze" data-category="general">
+      <a href="gift-box/index.html" class="game-card theme-bronze" data-category="general" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="icon">🎁</span>
         </div>
@@ -1062,7 +1070,7 @@
         </div>
       </a>
 
-      <a href="slot-machine/index.html" class="game-card theme-cherry" data-category="general">
+      <a href="slot-machine/index.html" class="game-card theme-cherry" data-category="general" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="icon">🎰</span>
         </div>
@@ -1076,7 +1084,7 @@
         </div>
       </a>
 
-      <a href="daily-checkin/index.html" class="game-card theme-gold" data-category="general">
+      <a href="daily-checkin/index.html" class="game-card theme-gold" data-category="general" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="icon">📅</span>
         </div>
@@ -1090,7 +1098,7 @@
         </div>
       </a>
 
-      <a href="bingo-challenge/index.html" class="game-card theme-emerald" data-category="general">
+      <a href="bingo-challenge/index.html" class="game-card theme-emerald" data-category="general" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="icon">🎱</span>
         </div>
@@ -1104,7 +1112,7 @@
         </div>
       </a>
 
-      <a href="gacha-machine/index.html" class="game-card theme-rainbow" data-category="general">
+      <a href="gacha-machine/index.html" class="game-card theme-rainbow" data-category="general" data-tags="voucher">
         <div class="card-thumbnail">
           <span class="icon">🎭</span>
         </div>
@@ -1137,15 +1145,18 @@
     function filterCards(category) {
       allCards.forEach(card => {
         const cat = card.dataset.category;
+        const tags = card.dataset.tags || '';
         if (category === 'all') {
           card.classList.remove('hidden');
+        } else if (category === 'voucher') {
+          card.classList.toggle('hidden', !tags.split(' ').includes('voucher'));
         } else {
           card.classList.toggle('hidden', cat !== category);
         }
       });
 
       // Show/hide section labels
-      if (category === 'all') {
+      if (category === 'all' || category === 'voucher') {
         sectionEvents.classList.remove('hidden');
         sectionGeneral.classList.remove('hidden');
       } else if (category === 'general') {
@@ -1174,11 +1185,13 @@
     });
 
     // Update counts dynamically
-    const counts = { all: 0, trungthu: 0, noel: 0, tet: 0, general: 0 };
+    const counts = { all: 0, trungthu: 0, noel: 0, tet: 0, general: 0, voucher: 0 };
     allCards.forEach(card => {
       const cat = card.dataset.category;
+      const tags = (card.dataset.tags || '').split(' ');
       counts[cat] = (counts[cat] || 0) + 1;
       counts.all++;
+      if (tags.includes('voucher')) counts.voucher++;
     });
     Object.entries(counts).forEach(([key, val]) => {
       const el = document.getElementById('count-' + key);
