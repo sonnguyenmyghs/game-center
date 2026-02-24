@@ -133,6 +133,11 @@
       border-color: rgba(234, 179, 8, 0.5);
       color: #fde047;
     }
+    .filter-tab[data-filter="ranking"].active {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+    }
 
     /* Count badge on filter tabs */
     .filter-count {
@@ -520,7 +525,7 @@
     <!-- Category Filter Tabs -->
     <div class="filter-bar" role="tablist" aria-label="Filter games by event">
       <button class="filter-tab active" data-filter="all" role="tab" aria-selected="true">
-        🎮 All <span class="filter-count" id="count-all">40</span>
+        🎮 All <span class="filter-count" id="count-all">43</span>
       </button>
       <button class="filter-tab" data-filter="trungthu" role="tab" aria-selected="false">
         🎑 Mid-Autumn <span class="filter-count" id="count-trungthu">4</span>
@@ -532,10 +537,13 @@
         🧧 Lunar New Year <span class="filter-count" id="count-tet">4</span>
       </button>
       <button class="filter-tab" data-filter="general" role="tab" aria-selected="false">
-        🕹️ Games <span class="filter-count" id="count-general">28</span>
+        🕹️ Games <span class="filter-count" id="count-general">31</span>
       </button>
       <button class="filter-tab" data-filter="voucher" role="tab" aria-selected="false">
         🏨 Booking Voucher <span class="filter-count" id="count-voucher">19</span>
+      </button>
+      <button class="filter-tab" data-filter="ranking" role="tab" aria-selected="false">
+        🏆 Rankings <span class="filter-count" id="count-ranking">0</span>
       </button>
     </div>
 
@@ -734,7 +742,7 @@
 
     <div class="game-grid" id="grid-general">
 
-      <a href="2048/index.html" class="game-card theme-orange" data-category="general">
+      <a href="2048/index.html" class="game-card theme-orange" data-category="general" data-tags="ranking">
         <div class="card-thumbnail">
           <span class="icon">🔢</span>
         </div>
@@ -748,7 +756,7 @@
         </div>
       </a>
 
-      <a href="flappy-bird/index.html" class="game-card theme-green" data-category="general">
+      <a href="flappy-bird/index.html" class="game-card theme-green" data-category="general" data-tags="ranking">
         <div class="card-thumbnail">
           <span class="icon">🐦</span>
         </div>
@@ -762,7 +770,7 @@
         </div>
       </a>
 
-      <a href="snake/index.html" class="game-card theme-blue" data-category="general">
+      <a href="snake/index.html" class="game-card theme-blue" data-category="general" data-tags="ranking">
         <div class="card-thumbnail">
           <span class="icon">🐍</span>
         </div>
@@ -804,7 +812,7 @@
         </div>
       </a>
 
-      <a href="breakout/index.html" class="game-card theme-cyan" data-category="general">
+      <a href="breakout/index.html" class="game-card theme-cyan" data-category="general" data-tags="ranking">
         <div class="card-thumbnail">
           <span class="icon">🧱</span>
         </div>
@@ -818,7 +826,7 @@
         </div>
       </a>
 
-      <a href="tetris/index.html" class="game-card theme-yellow" data-category="general">
+      <a href="tetris/index.html" class="game-card theme-yellow" data-category="general" data-tags="ranking">
         <div class="card-thumbnail">
           <span class="icon">🟦</span>
         </div>
@@ -846,7 +854,7 @@
         </div>
       </a>
 
-      <a href="dino-runner/index.html" class="game-card theme-red" data-category="general">
+      <a href="dino-runner/index.html" class="game-card theme-red" data-category="general" data-tags="ranking">
         <div class="card-thumbnail">
           <span class="icon">🦖</span>
         </div>
@@ -860,7 +868,7 @@
         </div>
       </a>
 
-      <a href="whack-a-mole/index.html" class="game-card theme-indigo" data-category="general">
+      <a href="whack-a-mole/index.html" class="game-card theme-indigo" data-category="general" data-tags="ranking">
         <div class="card-thumbnail">
           <span class="icon">🐹</span>
         </div>
@@ -888,7 +896,7 @@
         </div>
       </a>
 
-      <a href="color-match/index.html" class="game-card theme-rose" data-category="general">
+      <a href="color-match/index.html" class="game-card theme-rose" data-category="general" data-tags="ranking">
         <div class="card-thumbnail">
           <span class="icon">🎨</span>
         </div>
@@ -902,7 +910,7 @@
         </div>
       </a>
 
-      <a href="block-blast/index.html" class="game-card theme-amber" data-category="general">
+      <a href="block-blast/index.html" class="game-card theme-amber" data-category="general" data-tags="ranking">
         <div class="card-thumbnail">
           <span class="icon">💥</span>
         </div>
@@ -944,7 +952,7 @@
         </div>
       </a>
 
-      <a href="stack-tower/index.html" class="game-card theme-coral" data-category="general">
+      <a href="stack-tower/index.html" class="game-card theme-coral" data-category="general" data-tags="ranking">
         <div class="card-thumbnail">
           <span class="icon">🏗️</span>
         </div>
@@ -1126,6 +1134,48 @@
         </div>
       </a>
 
+      <a href="quiz-challenge/index.html" class="game-card theme-purple" data-category="general" data-tags="ranking">
+        <div class="card-thumbnail">
+          <span class="icon">🧠</span>
+        </div>
+        <div class="card-body">
+          <h3>Quiz Challenge</h3>
+          <p class="description">10 travel & hotel trivia questions — answer fast for bonus points! Save your score and climb the leaderboard.</p>
+          <div class="card-footer">
+            <span class="tag">Trivia</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="speed-tap/index.html" class="game-card theme-pink" data-category="general" data-tags="ranking">
+        <div class="card-thumbnail">
+          <span class="icon">👆</span>
+        </div>
+        <div class="card-body">
+          <h3>Speed Tap</h3>
+          <p class="description">Tap the glowing circles before they vanish! 30 seconds, chain combos for multipliers, compete for the top spot.</p>
+          <div class="card-footer">
+            <span class="tag">Reflex</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="reaction-test/index.html" class="game-card theme-red" data-category="general" data-tags="ranking">
+        <div class="card-thumbnail">
+          <span class="icon">⚡</span>
+        </div>
+        <div class="card-body">
+          <h3>Reaction Test</h3>
+          <p class="description">Wait for green — click as fast as you can! 5 rounds, measured in milliseconds. Lowest average time wins.</p>
+          <div class="card-footer">
+            <span class="tag">Reaction</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
     </div>
 
     <footer>
@@ -1150,13 +1200,15 @@
           card.classList.remove('hidden');
         } else if (category === 'voucher') {
           card.classList.toggle('hidden', !tags.split(' ').includes('voucher'));
+        } else if (category === 'ranking') {
+          card.classList.toggle('hidden', !tags.split(' ').includes('ranking'));
         } else {
           card.classList.toggle('hidden', cat !== category);
         }
       });
 
       // Show/hide section labels
-      if (category === 'all' || category === 'voucher') {
+      if (category === 'all' || category === 'voucher' || category === 'ranking') {
         sectionEvents.classList.remove('hidden');
         sectionGeneral.classList.remove('hidden');
       } else if (category === 'general') {
@@ -1185,13 +1237,14 @@
     });
 
     // Update counts dynamically
-    const counts = { all: 0, trungthu: 0, noel: 0, tet: 0, general: 0, voucher: 0 };
+    const counts = { all: 0, trungthu: 0, noel: 0, tet: 0, general: 0, voucher: 0, ranking: 0 };
     allCards.forEach(card => {
       const cat = card.dataset.category;
       const tags = (card.dataset.tags || '').split(' ');
       counts[cat] = (counts[cat] || 0) + 1;
       counts.all++;
       if (tags.includes('voucher')) counts.voucher++;
+      if (tags.includes('ranking')) counts.ranking++;
     });
     Object.entries(counts).forEach(([key, val]) => {
       const el = document.getElementById('count-' + key);

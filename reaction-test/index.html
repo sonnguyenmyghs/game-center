@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reaction Test</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>" />
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-dark: #0a0a1a;
+      --bg-red: #c0392b;
+      --bg-green: #00b894;
+      --bg-purple: #8e44ad;
+      --text-primary: #ffffff;
+      --text-secondary: #a0a0b8;
+      --accent: #6c63ff;
+      --card-bg: rgba(255,255,255,0.05);
+      --card-border: rgba(255,255,255,0.08);
+      --gold: #ffd700;
+      --silver: #c0c0c0;
+      --bronze: #cd7f32;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #app {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transition: background-color 50ms ease;
+    }
+
+    /* ── Back button ── */
+    #back-btn {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 1000;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.6);
+      text-decoration: none;
+      font-size: 13px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 0.2s, color 0.2s;
+      cursor: pointer;
+    }
+    #back-btn:hover {
+      background: rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.9);
+    }
+
+    /* ── Screens ── */
+    .screen {
+      display: none;
+      width: 100%;
+      height: 100%;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
+    .screen.active {
+      display: flex;
+    }
+
+    /* ── Home Screen ── */
+    #screen-home {
+      gap: 24px;
+    }
+
+    .home-icon {
+      font-size: 72px;
+      line-height: 1;
+      margin-bottom: 8px;
+      animation: pulse-icon 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-icon {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+
+    .home-title {
+      font-size: clamp(36px, 8vw, 64px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, #ffffff 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .home-subtitle {
+      font-size: clamp(14px, 3vw, 18px);
+      color: var(--text-secondary);
+      max-width: 400px;
+      line-height: 1.6;
+    }
+
+    .personal-best {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 15px;
+    }
+    .personal-best .label {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+    .personal-best .value {
+      font-size: 26px;
+      font-weight: 700;
+      color: #00b894;
+    }
+    .personal-best.hidden {
+      display: none;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      padding: 14px 32px;
+      border-radius: 50px;
+      border: none;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+      letter-spacing: 0.5px;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .btn:active {
+      transform: translateY(0);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #6c63ff, #9c59d1);
+      color: #fff;
+      font-size: 18px;
+      padding: 16px 48px;
+    }
+    .btn-secondary {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-primary);
+    }
+
+    .how-to {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 500px;
+    }
+    .how-to-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 100px;
+    }
+    .how-to-step .step-icon {
+      font-size: 28px;
+    }
+    .how-to-step .step-text {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    /* ── Game Screen ── */
+    #screen-game {
+      cursor: pointer;
+      position: relative;
+      gap: 0;
+    }
+
+    .game-round-counter {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 15px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.6);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      background: rgba(0,0,0,0.25);
+      padding: 6px 18px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .game-state-label {
+      font-size: clamp(14px, 3vw, 18px);
+      font-weight: 500;
+      color: rgba(255,255,255,0.75);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .game-main-text {
+      font-size: clamp(48px, 12vw, 96px);
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: -2px;
+      line-height: 1;
+      text-shadow: 0 4px 32px rgba(0,0,0,0.3);
+    }
+
+    .game-hint {
+      margin-top: 24px;
+      font-size: clamp(13px, 2.5vw, 16px);
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* ── Between Rounds ── */
+    #screen-between {
+      gap: 20px;
+    }
+
+    .round-result-ms {
+      font-size: clamp(56px, 15vw, 112px);
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: -3px;
+      line-height: 1;
+    }
+    .round-result-ms span {
+      font-size: 0.45em;
+      font-weight: 600;
+      opacity: 0.7;
+      letter-spacing: 0;
+    }
+
+    .round-result-label {
+      font-size: 20px;
+      color: var(--text-secondary);
+    }
+
+    .round-result-grade {
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    /* ── Final Result ── */
+    #screen-result {
+      gap: 16px;
+      overflow-y: auto;
+      padding: 60px 20px 20px;
+      justify-content: flex-start;
+    }
+
+    .result-title {
+      font-size: clamp(24px, 6vw, 40px);
+      font-weight: 800;
+    }
+
+    .result-average {
+      font-size: clamp(48px, 12vw, 80px);
+      font-weight: 900;
+      color: #00b894;
+      letter-spacing: -2px;
+      line-height: 1;
+    }
+    .result-average span {
+      font-size: 0.4em;
+      opacity: 0.7;
+      font-weight: 600;
+    }
+
+    .result-badge {
+      font-size: 24px;
+      font-weight: 700;
+      padding: 8px 24px;
+      border-radius: 50px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .rounds-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .round-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 10px 16px;
+    }
+    .round-row .round-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .round-row .round-ms {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .round-row .round-emoji {
+      font-size: 18px;
+      min-width: 28px;
+      text-align: right;
+    }
+    .round-row.penalty {
+      border-color: rgba(142, 68, 173, 0.4);
+    }
+
+    /* ── Leaderboard ── */
+    #screen-leaderboard {
+      gap: 16px;
+      overflow-y: auto;
+      padding: 60px 20px 20px;
+      justify-content: flex-start;
+    }
+
+    .lb-title {
+      font-size: clamp(24px, 6vw, 40px);
+      font-weight: 800;
+    }
+
+    .lb-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .lb-entry {
+      display: grid;
+      grid-template-columns: 40px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 12px 16px;
+      transition: background 0.2s;
+    }
+    .lb-entry:hover {
+      background: rgba(255,255,255,0.08);
+    }
+    .lb-entry.rank-1 { border-color: rgba(255,215,0,0.4); }
+    .lb-entry.rank-2 { border-color: rgba(192,192,192,0.4); }
+    .lb-entry.rank-3 { border-color: rgba(205,127,50,0.4); }
+
+    .lb-rank {
+      font-size: 20px;
+      font-weight: 900;
+      text-align: center;
+    }
+    .lb-rank.gold { color: var(--gold); }
+    .lb-rank.silver { color: var(--silver); }
+    .lb-rank.bronze { color: var(--bronze); }
+
+    .lb-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .lb-name {
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .lb-date {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .lb-score {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+    }
+    .lb-ms {
+      font-size: 20px;
+      font-weight: 800;
+      color: #00b894;
+    }
+    .lb-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.08);
+      white-space: nowrap;
+    }
+
+    .lb-empty {
+      color: var(--text-secondary);
+      font-size: 15px;
+      padding: 32px;
+    }
+
+    /* ── Save Score Modal ── */
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: #141428;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px;
+      padding: 32px;
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      align-items: center;
+      text-align: center;
+    }
+    .modal-title {
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .modal-score {
+      font-size: 40px;
+      font-weight: 900;
+      color: #00b894;
+    }
+    .modal-score span {
+      font-size: 0.5em;
+      opacity: 0.7;
+    }
+
+    .name-input {
+      width: 100%;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 16px;
+      color: #ffffff;
+      outline: none;
+      transition: border-color 0.2s;
+      text-align: center;
+    }
+    .name-input::placeholder {
+      color: rgba(255,255,255,0.3);
+    }
+    .name-input:focus {
+      border-color: rgba(108, 99, 255, 0.7);
+    }
+
+    /* ── Penalty flash ── */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-6px); }
+      80% { transform: translateX(6px); }
+    }
+    .shake {
+      animation: shake 0.4s ease;
+    }
+
+    /* ── Dots loader ── */
+    .waiting-dots {
+      display: inline-flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .waiting-dots span {
+      width: 10px;
+      height: 10px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 50%;
+      animation: dot-bounce 1.4s ease-in-out infinite;
+    }
+    .waiting-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .waiting-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dot-bounce {
+      0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+    /* ── Mobile tweaks ── */
+    @media (max-width: 480px) {
+      .btn-group { flex-direction: column; align-items: center; }
+      .btn { width: 100%; max-width: 280px; }
+      #screen-result, #screen-leaderboard { padding-top: 50px; }
+    }
+  </style>
+</head>
+<body>
+
+<a id="back-btn" href="../index.html">&#8592; Back</a>
+
+<div id="app">
+
+  <!-- HOME SCREEN -->
+  <div id="screen-home" class="screen active">
+    <div class="home-icon">⚡</div>
+    <h1 class="home-title">Reaction Test</h1>
+    <p class="home-subtitle">When the screen turns green — click as fast as you can! 5 rounds per session.</p>
+
+    <div id="personal-best-display" class="personal-best hidden">
+      <div>
+        <div class="label">Personal Best</div>
+        <div id="pb-value" class="value">—</div>
+      </div>
+    </div>
+
+    <div class="how-to">
+      <div class="how-to-step">
+        <div class="step-icon">🔴</div>
+        <div class="step-text">Wait on RED</div>
+      </div>
+      <div class="how-to-step">
+        <div class="step-icon">🟢</div>
+        <div class="step-text">Click on GREEN</div>
+      </div>
+      <div class="how-to-step">
+        <div class="step-icon">📊</div>
+        <div class="step-text">5 rounds, lowest avg wins</div>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary" id="btn-start">Start Game</button>
+      <button class="btn btn-secondary" id="btn-leaderboard-home">Leaderboard</button>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="screen-game" class="screen">
+    <div class="game-round-counter" id="game-round-counter">Round 1 / 5</div>
+    <div class="game-state-label" id="game-state-label">Get ready…</div>
+    <div class="game-main-text" id="game-main-text">●</div>
+    <div class="game-hint" id="game-hint">Tap anywhere to begin</div>
+    <div class="waiting-dots" id="waiting-dots" style="display:none">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+
+  <!-- BETWEEN ROUNDS SCREEN -->
+  <div id="screen-between" class="screen">
+    <div class="round-result-label" id="between-round-label">Round 1 result</div>
+    <div class="round-result-ms" id="between-ms">247<span>ms</span></div>
+    <div class="round-result-grade" id="between-grade">Nice!</div>
+    <div class="btn-group">
+      <button class="btn btn-primary" id="btn-next-round">Next Round →</button>
+    </div>
+  </div>
+
+  <!-- FINAL RESULT SCREEN -->
+  <div id="screen-result" class="screen">
+    <div class="result-title">Session Complete!</div>
+    <div class="result-average" id="result-avg">0<span>ms</span></div>
+    <div class="result-badge" id="result-badge">—</div>
+
+    <div class="rounds-breakdown" id="rounds-breakdown"></div>
+
+    <div class="btn-group" style="margin-top:8px">
+      <button class="btn btn-primary" id="btn-save-score">Save Score</button>
+      <button class="btn btn-secondary" id="btn-play-again">Play Again</button>
+      <button class="btn btn-secondary" id="btn-leaderboard-result">Leaderboard</button>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD SCREEN -->
+  <div id="screen-leaderboard" class="screen">
+    <div class="lb-title">Leaderboard</div>
+    <div class="lb-list" id="lb-list"></div>
+    <div class="btn-group" style="margin-top:8px">
+      <button class="btn btn-secondary" id="btn-lb-back">Back to Home</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- SAVE SCORE MODAL -->
+<div id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title">Save Your Score</div>
+    <div class="modal-score" id="modal-score-display">0<span>ms avg</span></div>
+    <input class="name-input" id="name-input" type="text" maxlength="20" placeholder="Enter your name…" autocomplete="off" />
+    <div class="btn-group">
+      <button class="btn btn-primary" id="btn-confirm-save">Save</button>
+      <button class="btn btn-secondary" id="btn-cancel-save">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Constants ──
+  const ROUNDS = 5;
+  const MIN_DELAY = 1500;
+  const MAX_DELAY = 5000;
+  const PENALTY_MS = 200;
+  const LS_KEY = 'reaction_leaderboard_v1';
+  const MAX_LB = 10;
+
+  // ── State ──
+  let currentRound = 0;
+  let roundTimes = [];
+  let greenTime = null;
+  let waitTimer = null;
+  let gamePhase = 'idle'; // idle | waiting | green | penalty | between | result
+
+  // ── DOM ──
+  const app = document.getElementById('app');
+  const screens = {
+    home: document.getElementById('screen-home'),
+    game: document.getElementById('screen-game'),
+    between: document.getElementById('screen-between'),
+    result: document.getElementById('screen-result'),
+    leaderboard: document.getElementById('screen-leaderboard'),
+  };
+
+  function showScreen(name) {
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+  }
+
+  // ── Helpers ──
+  function getGrade(ms, isPenalty) {
+    if (isPenalty) return '💜 Too Early';
+    if (ms < 200) return '⚡ Lightning';
+    if (ms < 250) return '🥇 Expert';
+    if (ms < 350) return '🎯 Good';
+    if (ms < 500) return '👍 Nice';
+    return '🐌 Slow';
+  }
+
+  function getGradeForAvg(ms) {
+    if (ms < 200) return '⚡ Lightning';
+    if (ms < 250) return '🥇 Expert';
+    if (ms < 350) return '🎯 Good';
+    if (ms < 500) return '👍 Nice';
+    return '🐌 Keep Practicing';
+  }
+
+  function getBadge(ms) {
+    if (ms < 200) return '⚡ Lightning';
+    if (ms < 250) return '🥇 Expert';
+    if (ms < 350) return '🎯 Good';
+    return null;
+  }
+
+  function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  // ── LocalStorage ──
+  function loadLeaderboard() {
+    try {
+      return JSON.parse(localStorage.getItem(LS_KEY)) || [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveLeaderboard(lb) {
+    localStorage.setItem(LS_KEY, JSON.stringify(lb));
+  }
+
+  function getPersonalBest() {
+    const lb = loadLeaderboard();
+    if (!lb.length) return null;
+    return Math.min(...lb.map(e => e.avgMs));
+  }
+
+  function addToLeaderboard(name, avgMs, roundTimes) {
+    const lb = loadLeaderboard();
+    const best = Math.min(...roundTimes.filter(r => !r.penalty).map(r => r.ms));
+    lb.push({ name: name.trim() || 'Anonymous', avgMs, best, date: new Date().toISOString() });
+    lb.sort((a, b) => a.avgMs - b.avgMs);
+    const trimmed = lb.slice(0, MAX_LB);
+    saveLeaderboard(trimmed);
+    return trimmed;
+  }
+
+  // ── Home screen ──
+  function initHome() {
+    const pb = getPersonalBest();
+    const pbEl = document.getElementById('personal-best-display');
+    const pbVal = document.getElementById('pb-value');
+    if (pb !== null) {
+      pbEl.classList.remove('hidden');
+      pbVal.textContent = pb + ' ms';
+    } else {
+      pbEl.classList.add('hidden');
+    }
+    showScreen('home');
+  }
+
+  // ── Game logic ──
+  function startGame() {
+    currentRound = 0;
+    roundTimes = [];
+    startRound();
+  }
+
+  function startRound() {
+    currentRound++;
+    gamePhase = 'waiting';
+
+    app.style.backgroundColor = '#c0392b';
+    showScreen('game');
+
+    const counter = document.getElementById('game-round-counter');
+    counter.textContent = `Round ${currentRound} / ${ROUNDS}`;
+
+    setGameText('Wait for green…', 'WAIT', '');
+    document.getElementById('waiting-dots').style.display = 'flex';
+
+    const delay = MIN_DELAY + Math.random() * (MAX_DELAY - MIN_DELAY);
+    waitTimer = setTimeout(showGreen, delay);
+  }
+
+  function showGreen() {
+    gamePhase = 'green';
+    app.style.backgroundColor = '#00b894';
+    document.getElementById('waiting-dots').style.display = 'none';
+    setGameText('CLICK NOW! ⚡', 'GO!', 'Click / Tap as fast as you can!');
+    greenTime = performance.now();
+  }
+
+  function setGameText(label, main, hint) {
+    document.getElementById('game-state-label').textContent = label;
+    document.getElementById('game-main-text').textContent = main;
+    document.getElementById('game-hint').textContent = hint;
+  }
+
+  function handleGameClick(e) {
+    if (gamePhase === 'waiting') {
+      // Too early!
+      clearTimeout(waitTimer);
+      gamePhase = 'penalty';
+      app.style.backgroundColor = '#8e44ad';
+      document.getElementById('waiting-dots').style.display = 'none';
+      setGameText('Too early!', '−200ms', 'Penalty added…');
+      document.getElementById('screen-game').classList.add('shake');
+      setTimeout(() => document.getElementById('screen-game').classList.remove('shake'), 400);
+
+      roundTimes.push({ ms: PENALTY_MS, penalty: true });
+
+      setTimeout(showBetween, 1200);
+
+    } else if (gamePhase === 'green') {
+      const reactionMs = Math.round(performance.now() - greenTime);
+      gamePhase = 'between';
+      roundTimes.push({ ms: reactionMs, penalty: false });
+      showBetween();
+    }
+    // ignore clicks in other phases
+  }
+
+  function showBetween() {
+    const last = roundTimes[roundTimes.length - 1];
+    app.style.backgroundColor = '#0a0a1a';
+    showScreen('between');
+
+    document.getElementById('between-round-label').textContent = `Round ${currentRound} result`;
+
+    const msEl = document.getElementById('between-ms');
+    if (last.penalty) {
+      msEl.innerHTML = `+${PENALTY_MS}<span>ms penalty</span>`;
+    } else {
+      msEl.innerHTML = `${last.ms}<span>ms</span>`;
+    }
+
+    document.getElementById('between-grade').textContent = getGrade(last.ms, last.penalty);
+
+    const nextBtn = document.getElementById('btn-next-round');
+    if (currentRound >= ROUNDS) {
+      nextBtn.textContent = 'See Results →';
+    } else {
+      nextBtn.textContent = `Next Round →`;
+    }
+  }
+
+  function showResult() {
+    app.style.backgroundColor = '#0a0a1a';
+    const avg = Math.round(roundTimes.reduce((a, b) => a + b.ms, 0) / roundTimes.length);
+
+    document.getElementById('result-avg').innerHTML = `${avg}<span>ms</span>`;
+    document.getElementById('result-badge').textContent = getGradeForAvg(avg);
+    document.getElementById('modal-score-display').innerHTML = `${avg}<span>ms avg</span>`;
+
+    // Breakdown
+    const breakdown = document.getElementById('rounds-breakdown');
+    breakdown.innerHTML = '';
+    roundTimes.forEach((r, i) => {
+      const row = document.createElement('div');
+      row.className = 'round-row' + (r.penalty ? ' penalty' : '');
+      row.innerHTML = `
+        <span class="round-label">Round ${i + 1}</span>
+        <span class="round-ms">${r.penalty ? '+' + PENALTY_MS + 'ms' : r.ms + 'ms'}</span>
+        <span class="round-emoji">${getGrade(r.ms, r.penalty)}</span>
+      `;
+      breakdown.appendChild(row);
+    });
+
+    showScreen('result');
+    gamePhase = 'result';
+  }
+
+  // ── Leaderboard ──
+  function showLeaderboard() {
+    const lb = loadLeaderboard();
+    const list = document.getElementById('lb-list');
+    list.innerHTML = '';
+
+    if (!lb.length) {
+      list.innerHTML = '<div class="lb-empty">No scores yet. Be the first!</div>';
+      showScreen('leaderboard');
+      return;
+    }
+
+    lb.forEach((entry, i) => {
+      const rank = i + 1;
+      const rankClasses = ['', 'gold', 'silver', 'bronze'];
+      const rankIcons = ['', '🥇', '🥈', '🥉'];
+      const rankClass = rank <= 3 ? `rank-${rank}` : '';
+      const rankDisplay = rank <= 3
+        ? `<span class="lb-rank ${rankClasses[rank]}">${rankIcons[rank]}</span>`
+        : `<span class="lb-rank" style="color:var(--text-secondary);font-size:15px">#${rank}</span>`;
+
+      const badge = getBadge(entry.avgMs);
+      const badgeHtml = badge ? `<span class="lb-badge">${badge}</span>` : '';
+
+      const el = document.createElement('div');
+      el.className = `lb-entry ${rankClass}`;
+      el.innerHTML = `
+        ${rankDisplay}
+        <div class="lb-info">
+          <span class="lb-name">${escapeHtml(entry.name)}</span>
+          <span class="lb-date">${formatDate(entry.date)}</span>
+        </div>
+        <div class="lb-score">
+          <span class="lb-ms">${entry.avgMs}ms</span>
+          ${badgeHtml}
+        </div>
+      `;
+      list.appendChild(el);
+    });
+
+    showScreen('leaderboard');
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // ── Event Listeners ──
+
+  // Home
+  document.getElementById('btn-start').addEventListener('click', () => {
+    startGame();
+  });
+  document.getElementById('btn-leaderboard-home').addEventListener('click', showLeaderboard);
+
+  // Game — full screen click/touch
+  document.getElementById('screen-game').addEventListener('click', handleGameClick);
+  document.getElementById('screen-game').addEventListener('touchend', function(e) {
+    e.preventDefault();
+    handleGameClick(e);
+  }, { passive: false });
+
+  // Between rounds
+  document.getElementById('btn-next-round').addEventListener('click', () => {
+    if (currentRound >= ROUNDS) {
+      showResult();
+    } else {
+      startRound();
+    }
+  });
+
+  // Result
+  document.getElementById('btn-save-score').addEventListener('click', () => {
+    document.getElementById('modal-overlay').classList.add('active');
+    document.getElementById('name-input').focus();
+  });
+  document.getElementById('btn-play-again').addEventListener('click', () => {
+    startGame();
+  });
+  document.getElementById('btn-leaderboard-result').addEventListener('click', showLeaderboard);
+
+  // Modal
+  document.getElementById('btn-confirm-save').addEventListener('click', () => {
+    const name = document.getElementById('name-input').value;
+    const avg = Math.round(roundTimes.reduce((a, b) => a + b.ms, 0) / roundTimes.length);
+    addToLeaderboard(name, avg, roundTimes);
+    document.getElementById('modal-overlay').classList.remove('active');
+    document.getElementById('name-input').value = '';
+    document.getElementById('btn-save-score').textContent = '✓ Saved!';
+    document.getElementById('btn-save-score').disabled = true;
+    document.getElementById('btn-save-score').style.opacity = '0.6';
+  });
+  document.getElementById('btn-cancel-save').addEventListener('click', () => {
+    document.getElementById('modal-overlay').classList.remove('active');
+  });
+  document.getElementById('name-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('btn-confirm-save').click();
+    if (e.key === 'Escape') document.getElementById('btn-cancel-save').click();
+  });
+  document.getElementById('modal-overlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('modal-overlay')) {
+      document.getElementById('btn-cancel-save').click();
+    }
+  });
+
+  // Leaderboard
+  document.getElementById('btn-lb-back').addEventListener('click', initHome);
+
+  // Prevent context menu on long press (mobile)
+  document.addEventListener('contextmenu', e => e.preventDefault());
+
+  // ── Init ──
+  initHome();
+
+})();
+</script>
+</body>
+</html>
