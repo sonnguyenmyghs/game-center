@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎄 Christmas Slot Machine</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #0a0a1a;
+      background-image: radial-gradient(ellipse at 50% 0%, rgba(220,20,60,0.12) 0%, transparent 60%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      font-family: 'Segoe UI', sans-serif;
+      color: #ffffff;
+      overflow-x: hidden;
+      padding: 20px 10px 40px;
+      position: relative;
+    }
+
+    /* Snowflake particles */
+    .snowflake {
+      position: fixed;
+      top: -20px;
+      color: #ffffff;
+      font-size: 1.4rem;
+      opacity: 0.6;
+      pointer-events: none;
+      z-index: 0;
+      animation: snowDrift linear infinite;
+    }
+
+    @keyframes snowDrift {
+      0% {
+        transform: translateY(-20px) rotate(0deg);
+        opacity: 0.7;
+      }
+      100% {
+        transform: translateY(110vh) rotate(360deg);
+        opacity: 0.2;
+      }
+    }
+
+    /* Back button */
+    .back-btn {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #fff;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      transition: background 0.2s, border-color 0.2s;
+      z-index: 100;
+    }
+    .back-btn:hover {
+      background: rgba(255,255,255,0.15);
+      border-color: rgba(220,20,60,0.6);
+    }
+
+    /* Title */
+    .game-title {
+      font-size: clamp(1.6rem, 5vw, 2.4rem);
+      font-weight: 900;
+      text-align: center;
+      margin-bottom: 6px;
+      background: linear-gradient(90deg, #dc143c, #ffffff, #228b22, #dc143c);
+      background-size: 300% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: titleShimmer 3s linear infinite;
+      letter-spacing: 1px;
+      position: relative;
+      z-index: 1;
+    }
+
+    @keyframes titleShimmer {
+      0%   { background-position: 0% center; }
+      100% { background-position: 300% center; }
+    }
+
+    .game-subtitle {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.45);
+      text-align: center;
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Credits bar */
+    .credits-bar {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 10px 24px;
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .credits-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .credits-label {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .credits-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #ffd700;
+      text-shadow: 0 0 10px rgba(255,215,0,0.5);
+      transition: transform 0.2s;
+    }
+
+    .credits-value.bump {
+      animation: creditBump 0.3s ease;
+    }
+
+    @keyframes creditBump {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+
+    .credits-divider {
+      width: 1px;
+      height: 36px;
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* Machine wrapper */
+    .machine-wrapper {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Jackpot banner */
+    .jackpot-banner {
+      background: linear-gradient(90deg, #dc143c, #8b0000, #dc143c);
+      background-size: 200% auto;
+      animation: jackpotBannerAnim 1.5s linear infinite;
+      border-radius: 8px 8px 0 0;
+      padding: 8px 24px;
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: #ffd700;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+
+    @keyframes jackpotBannerAnim {
+      0%   { background-position: 0% center; }
+      100% { background-position: 200% center; }
+    }
+
+    /* Machine frame */
+    .machine-frame {
+      background: linear-gradient(145deg, #1a1a2e, #16213e, #0f3460);
+      border: 2px solid rgba(34,139,34,0.3);
+      border-radius: 0 0 20px 20px;
+      padding: 20px;
+      width: min(420px, 95vw);
+      box-shadow:
+        0 0 40px rgba(220,20,60,0.15),
+        0 0 80px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+
+    /* Lights strip */
+    .lights-strip {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding: 0 4px;
+    }
+
+    .light-bulb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #333;
+      transition: background 0.1s, box-shadow 0.1s;
+    }
+
+    .light-bulb.on-red {
+      background: #ff4444;
+      box-shadow: 0 0 8px #ff4444, 0 0 16px rgba(255,68,68,0.5);
+    }
+
+    .light-bulb.on-green {
+      background: #44ff44;
+      box-shadow: 0 0 8px #44ff44, 0 0 16px rgba(68,255,68,0.5);
+    }
+
+    .light-bulb.on-gold {
+      background: #ffd700;
+      box-shadow: 0 0 8px #ffd700, 0 0 16px rgba(255,215,0,0.5);
+    }
+
+    /* Reels container */
+    .reels-container {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      position: relative;
+    }
+
+    .reel-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .reel-label {
+      font-size: 0.65rem;
+      color: rgba(255,255,255,0.3);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Win line */
+    .win-line-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+
+    .win-line {
+      position: absolute;
+      left: -10px;
+      right: -10px;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 3px;
+      background: transparent;
+      border-top: 2px dashed rgba(255,255,255,0.1);
+      pointer-events: none;
+      transition: border-color 0.3s, box-shadow 0.3s;
+      z-index: 5;
+    }
+
+    .win-line.active {
+      border-color: #dc143c;
+      border-style: solid;
+      box-shadow: 0 0 12px #dc143c, 0 0 24px rgba(220,20,60,0.5);
+      animation: winLinePulse 0.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes winLinePulse {
+      from { box-shadow: 0 0 8px #dc143c, 0 0 16px rgba(220,20,60,0.4); }
+      to   { box-shadow: 0 0 16px #dc143c, 0 0 32px rgba(220,20,60,0.7); }
+    }
+
+    /* Reel window */
+    .reel-window {
+      width: 90px;
+      height: 270px;
+      overflow: hidden;
+      border-radius: 10px;
+      background: #0a0a0a;
+      border: 2px solid rgba(255,255,255,0.1);
+      position: relative;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+    }
+
+    .reel-window::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 30%;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .reel-window::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 30%;
+      background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .reel-window.spinning .reel-strip {
+      filter: blur(1px);
+    }
+
+    .reel-window.stopping .reel-strip {
+      filter: blur(0.5px);
+    }
+
+    .reel-strip {
+      display: flex;
+      flex-direction: column;
+      will-change: transform;
+    }
+
+    .reel-symbol {
+      width: 90px;
+      height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.6rem;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    /* Win highlight */
+    .reel-symbol.win-highlight {
+      animation: symbolWin 0.4s ease-in-out infinite alternate;
+    }
+
+    @keyframes symbolWin {
+      from { transform: scale(1); filter: brightness(1); }
+      to   { transform: scale(1.15); filter: brightness(1.4) drop-shadow(0 0 8px #dc143c); }
+    }
+
+    /* Spin button area */
+    .spin-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 20px;
+      gap: 10px;
+    }
+
+    .spin-btn {
+      background: linear-gradient(135deg, #dc143c, #228b22);
+      border: none;
+      border-radius: 50px;
+      padding: 16px 60px;
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: #ffffff;
+      cursor: pointer;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      box-shadow:
+        0 6px 20px rgba(139,0,0,0.6),
+        0 2px 0 #8b0000,
+        inset 0 1px 0 rgba(255,255,255,0.2);
+      transition: transform 0.1s, box-shadow 0.1s, filter 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .spin-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      transition: left 0.4s;
+    }
+
+    .spin-btn:hover:not(:disabled)::before {
+      left: 100%;
+    }
+
+    .spin-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow:
+        0 10px 28px rgba(139,0,0,0.7),
+        0 2px 0 #8b0000,
+        inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+
+    .spin-btn:active:not(:disabled) {
+      transform: translateY(1px);
+      box-shadow:
+        0 3px 10px rgba(139,0,0,0.5),
+        0 1px 0 #8b0000,
+        inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+
+    .spin-btn:disabled {
+      filter: grayscale(0.5) brightness(0.7);
+      cursor: not-allowed;
+    }
+
+    .spin-cost-label {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.4);
+    }
+
+    /* Result display */
+    .result-display {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 14px;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.3s, transform 0.3s;
+    }
+
+    .result-display.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .result-text {
+      font-size: 1rem;
+      font-weight: 700;
+      text-align: center;
+      padding: 10px 20px;
+      border-radius: 8px;
+    }
+
+    .result-text.win {
+      color: #ffd700;
+      background: rgba(255,215,0,0.1);
+      border: 1px solid rgba(255,215,0,0.3);
+      text-shadow: 0 0 10px rgba(255,215,0,0.6);
+    }
+
+    .result-text.lose {
+      color: rgba(255,255,255,0.5);
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .result-text.jackpot {
+      color: #ffd700;
+      background: rgba(220,20,60,0.15);
+      border: 1px solid rgba(220,20,60,0.5);
+      text-shadow: 0 0 15px rgba(255,215,0,0.8);
+      animation: jackpotTextPulse 0.6s ease-in-out infinite alternate;
+    }
+
+    @keyframes jackpotTextPulse {
+      from { box-shadow: 0 0 10px rgba(220,20,60,0.3); }
+      to   { box-shadow: 0 0 25px rgba(220,20,60,0.7); }
+    }
+
+    /* Payout table */
+    .payout-section {
+      margin-top: 24px;
+      width: min(420px, 95vw);
+      position: relative;
+      z-index: 1;
+    }
+
+    .payout-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.6);
+      text-align: center;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .payout-table {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .payout-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      transition: background 0.2s;
+    }
+
+    .payout-row:last-child {
+      border-bottom: none;
+    }
+
+    .payout-row:hover {
+      background: rgba(255,255,255,0.04);
+    }
+
+    .payout-symbols {
+      font-size: 1.1rem;
+      letter-spacing: 2px;
+      min-width: 80px;
+    }
+
+    .payout-desc {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.5);
+      flex: 1;
+      text-align: center;
+      padding: 0 8px;
+    }
+
+    .payout-credits {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #ffd700;
+      text-align: right;
+      min-width: 60px;
+    }
+
+    /* Floating coin / sparkle particles */
+    .particle {
+      position: fixed;
+      pointer-events: none;
+      z-index: 999;
+      font-size: 1.4rem;
+      animation: particleFly 1.2s ease-out forwards;
+    }
+
+    @keyframes particleFly {
+      0% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(var(--dx), var(--dy)) scale(0.4) rotate(var(--rot));
+        opacity: 0;
+      }
+    }
+
+    /* Sparkle burst */
+    .sparkle {
+      position: fixed;
+      pointer-events: none;
+      z-index: 999;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      animation: sparkleBurst 0.8s ease-out forwards;
+    }
+
+    @keyframes sparkleBurst {
+      0% {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(var(--dx), var(--dy)) scale(0);
+        opacity: 0;
+      }
+    }
+
+    /* Auto-buy credits button */
+    .refill-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.6);
+      border-radius: 20px;
+      padding: 6px 18px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      margin-top: 4px;
+    }
+
+    .refill-btn:hover {
+      background: rgba(220,20,60,0.15);
+      border-color: rgba(220,20,60,0.4);
+      color: #fff;
+    }
+
+    /* Responsive */
+    @media (max-width: 460px) {
+      .reel-window {
+        width: 76px;
+        height: 228px;
+      }
+      .reel-symbol {
+        width: 76px;
+        height: 76px;
+        font-size: 2.1rem;
+      }
+      .spin-btn {
+        padding: 14px 40px;
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <a href="../index.html" class="back-btn">← Back</a>
+
+  <!-- Snowflake decorations -->
+  <div class="snowflake" id="sf0">❄</div>
+  <div class="snowflake" id="sf1">❄</div>
+  <div class="snowflake" id="sf2">❄</div>
+  <div class="snowflake" id="sf3">❄</div>
+  <div class="snowflake" id="sf4">❄</div>
+  <div class="snowflake" id="sf5">❄</div>
+  <div class="snowflake" id="sf6">❄</div>
+  <div class="snowflake" id="sf7">❄</div>
+
+  <h1 class="game-title">🎄 Christmas Slot Machine</h1>
+  <p class="game-subtitle">Spin to win holiday prizes!</p>
+
+  <!-- Credits bar -->
+  <div class="credits-bar">
+    <div class="credits-item">
+      <span class="credits-label">Holiday Points</span>
+      <span class="credits-value" id="creditsDisplay">100</span>
+    </div>
+    <div class="credits-divider"></div>
+    <div class="credits-item">
+      <span class="credits-label">Total Won</span>
+      <span class="credits-value" id="totalWonDisplay" style="color:#34d399;">0</span>
+    </div>
+    <div class="credits-divider"></div>
+    <div class="credits-item">
+      <span class="credits-label">Spins</span>
+      <span class="credits-value" id="spinsDisplay" style="color:#a78bfa;">0</span>
+    </div>
+  </div>
+
+  <!-- Machine -->
+  <div class="machine-wrapper">
+    <div class="jackpot-banner">⭐ JACKPOT!</div>
+    <div class="machine-frame">
+
+      <!-- Lights top -->
+      <div class="lights-strip" id="lightsTop"></div>
+
+      <!-- Reels -->
+      <div class="reels-container" id="reelsContainer">
+        <div class="reel-column">
+          <div class="reel-label">Reel 1</div>
+          <div style="position:relative; display:flex; align-items:center;">
+            <div class="reel-window" id="reel0"><div class="reel-strip" id="strip0"></div></div>
+          </div>
+        </div>
+        <div class="reel-column" style="position:relative;">
+          <div class="reel-label">Reel 2</div>
+          <div style="position:relative; display:flex; align-items:center;">
+            <div class="win-line" id="winLine"></div>
+            <div class="reel-window" id="reel1"><div class="reel-strip" id="strip1"></div></div>
+          </div>
+        </div>
+        <div class="reel-column">
+          <div class="reel-label">Reel 3</div>
+          <div style="position:relative; display:flex; align-items:center;">
+            <div class="reel-window" id="reel2"><div class="reel-strip" id="strip2"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lights bottom -->
+      <div class="lights-strip" id="lightsBottom" style="margin-top:16px; margin-bottom:0;"></div>
+
+      <!-- Spin area -->
+      <div class="spin-area">
+        <button class="spin-btn" id="spinBtn">SPIN</button>
+        <span class="spin-cost-label">Cost: 10 points per spin</span>
+        <button class="refill-btn" id="refillBtn">+ Add 100 Points</button>
+      </div>
+
+      <!-- Result -->
+      <div class="result-display" id="resultDisplay">
+        <div class="result-text" id="resultText"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Payout table -->
+  <div class="payout-section">
+    <div class="payout-title">Prize Table 🎄</div>
+    <div class="payout-table" id="payoutTable"></div>
+  </div>
+
+  <script>
+    // ============================================================
+    // CONSTANTS
+    // ============================================================
+    const SPIN_COST = 10;
+    const INITIAL_CREDITS = 100;
+    const REEL_EXTRA = 30;
+    const VISIBLE_ROWS = 3;
+    const symbolHeight = 90;
+
+    const SYMBOLS = ['🎄','❄️','🎁','🔔','⭐','🎅','🦌','⛄'];
+
+    const PAYOUTS = {
+      '⭐': {
+        triple: 'Christmas Jackpot! 🎊',
+        double: 'Xmas Voucher 50K',
+        tripleCredits: 1000,
+        doubleCredits: 50
+      },
+      '🎄': {
+        triple: 'Christmas Special! 🎁',
+        double: 'Christmas Bonus',
+        tripleCredits: 500,
+        doubleCredits: 100
+      },
+      '🎅': {
+        triple: "Santa's Grand Gift!",
+        double: "Santa's Bonus +30",
+        tripleCredits: 300,
+        doubleCredits: 30
+      },
+      '🎁': {
+        triple: 'Gift Box Prize 100pts',
+        double: '+20 Holiday Pts',
+        tripleCredits: 100,
+        doubleCredits: 20
+      },
+      'default': {
+        triple: 'Holiday Gift!',
+        double: '+10 Points',
+        tripleCredits: 50,
+        doubleCredits: 10
+      }
+    };
+
+    const SYMBOL_WEIGHTS = {
+      '🎄': 12,
+      '❄️': 15,
+      '🎁': 12,
+      '🔔': 12,
+      '⭐': 4,
+      '🎅': 10,
+      '🦌': 12,
+      '⛄': 13,
+    };
+
+    const COIN_EMOJIS = ['❄️','🎁','⭐','✨'];
+
+    // ============================================================
+    // STATE
+    // ============================================================
+    let credits = INITIAL_CREDITS;
+    let spinning = false;
+    let totalWon = 0;
+    let totalSpins = 0;
+
+    // ============================================================
+    // DOM REFERENCES
+    // ============================================================
+    const creditsDisplay = document.getElementById('creditsDisplay');
+    const totalWonDisplay = document.getElementById('totalWonDisplay');
+    const spinsDisplay = document.getElementById('spinsDisplay');
+    const spinBtn = document.getElementById('spinBtn');
+    const refillBtn = document.getElementById('refillBtn');
+    const resultEl = document.getElementById('resultDisplay');
+    const resultText = document.getElementById('resultText');
+    const winLine = document.getElementById('winLine');
+    const payoutTable = document.getElementById('payoutTable');
+    const lightsTop = document.getElementById('lightsTop');
+    const lightsBottom = document.getElementById('lightsBottom');
+
+    const reelWindows = [
+      document.getElementById('reel0'),
+      document.getElementById('reel1'),
+      document.getElementById('reel2'),
+    ];
+    const strips = [
+      document.getElementById('strip0'),
+      document.getElementById('strip1'),
+      document.getElementById('strip2'),
+    ];
+
+    // ============================================================
+    // WEIGHTED RANDOM SYMBOL
+    // ============================================================
+    function randomSymbol() {
+      const totalWeight = Object.values(SYMBOL_WEIGHTS).reduce((a, b) => a + b, 0);
+      let rand = Math.random() * totalWeight;
+      for (const [sym, w] of Object.entries(SYMBOL_WEIGHTS)) {
+        rand -= w;
+        if (rand <= 0) return sym;
+      }
+      return SYMBOLS[SYMBOLS.length - 1];
+    }
+
+    // ============================================================
+    // CREDITS
+    // ============================================================
+    function updateCredits() {
+      creditsDisplay.textContent = credits;
+      creditsDisplay.classList.remove('bump');
+      void creditsDisplay.offsetWidth;
+      creditsDisplay.classList.add('bump');
+      totalWonDisplay.textContent = totalWon;
+      spinsDisplay.textContent = totalSpins;
+    }
+
+    // ============================================================
+    // SHOW RESULT
+    // ============================================================
+    function showResult(msg, type) {
+      resultText.textContent = msg;
+      resultText.className = 'result-text ' + type;
+      resultEl.classList.add('show');
+    }
+
+    // ============================================================
+    // BUILD REEL STRIP
+    // ============================================================
+    function buildReelStrip(reelIdx) {
+      const strip = strips[reelIdx];
+      strip.innerHTML = '';
+      strip.style.transform = 'translateY(0px)';
+      strip.style.transition = 'none';
+      for (let i = 0; i < REEL_EXTRA; i++) {
+        const div = document.createElement('div');
+        div.className = 'reel-symbol';
+        div.textContent = randomSymbol();
+        strip.appendChild(div);
+      }
+    }
+
+    // ============================================================
+    // EVALUATE RESULT
+    // ============================================================
+    function evaluateResult(midRow) {
+      const [s0, s1, s2] = midRow;
+      winLine.classList.remove('active');
+
+      // Check triple
+      if (s0 === s1 && s1 === s2) {
+        const payout = PAYOUTS[s0] || PAYOUTS['default'];
+        const earned = payout.tripleCredits;
+        credits += earned;
+        totalWon += earned;
+        updateCredits();
+        showResult(`${payout.triple} +${earned} pts`, 'jackpot');
+        winLine.classList.add('active');
+        triggerWinEffects('triple', earned);
+        highlightWinSymbols();
+        return;
+      }
+
+      // Check double
+      let doubleSymbol = null;
+      if (s0 === s1) doubleSymbol = s0;
+      else if (s1 === s2) doubleSymbol = s1;
+      else if (s0 === s2) doubleSymbol = s0;
+
+      if (doubleSymbol) {
+        const payout = PAYOUTS[doubleSymbol] || PAYOUTS['default'];
+        const earned = payout.doubleCredits;
+        credits += earned;
+        totalWon += earned;
+        updateCredits();
+        showResult(`${payout.double} +${earned} pts`, 'win');
+        winLine.classList.add('active');
+        triggerWinEffects('double', earned);
+        return;
+      }
+
+      // No win
+      showResult('No match — spin again!', 'lose');
+    }
+
+    // ============================================================
+    // HIGHLIGHT WIN SYMBOLS
+    // ============================================================
+    function highlightWinSymbols() {
+      for (let r = 0; r < 3; r++) {
+        const strip = strips[r];
+        const st = reelWindows[r];
+        // The middle symbol in a 3-row window is index 1 (0-indexed) from the visible top
+        // After animation, the visible top symbol is at targetPos offset
+        // We highlight the middle row reel symbols visually via the reel window overlay
+        // Instead, just flash the reel windows
+        st.style.boxShadow = '0 0 20px rgba(220,20,60,0.8), inset 0 0 20px rgba(220,20,60,0.2)';
+        setTimeout(() => {
+          st.style.boxShadow = '';
+        }, 1200);
+      }
+    }
+
+    // ============================================================
+    // WIN EFFECTS
+    // ============================================================
+    function triggerWinEffects(type, amount) {
+      const count = type === 'triple' ? 20 : 10;
+      spawnCoins(count);
+      spawnSparkles(type === 'triple' ? 30 : 15);
+      if (type === 'triple') {
+        flashJackpotBanner();
+      }
+    }
+
+    function spawnCoins(count) {
+      const rect = spinBtn.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+          const el = document.createElement('div');
+          el.className = 'particle';
+          el.textContent = COIN_EMOJIS[Math.floor(Math.random() * COIN_EMOJIS.length)];
+          const angle = Math.random() * Math.PI * 2;
+          const dist = 80 + Math.random() * 160;
+          el.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+          el.style.setProperty('--dy', Math.sin(angle) * dist - 60 + 'px');
+          el.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
+          el.style.left = cx + 'px';
+          el.style.top = cy + 'px';
+          el.style.animationDuration = (0.8 + Math.random() * 0.6) + 's';
+          document.body.appendChild(el);
+          el.addEventListener('animationend', () => el.remove());
+        }, i * 40);
+      }
+    }
+
+    function spawnSparkles(count) {
+      const machineRect = document.querySelector('.machine-frame').getBoundingClientRect();
+      const colors = ['#dc143c', '#228b22', '#ffd700', '#ffffff', '#ff69b4'];
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+          const el = document.createElement('div');
+          el.className = 'sparkle';
+          const angle = Math.random() * Math.PI * 2;
+          const dist = 40 + Math.random() * 120;
+          el.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+          el.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+          el.style.left = (machineRect.left + Math.random() * machineRect.width) + 'px';
+          el.style.top = (machineRect.top + Math.random() * machineRect.height) + 'px';
+          el.style.background = colors[Math.floor(Math.random() * colors.length)];
+          el.style.width = (4 + Math.random() * 6) + 'px';
+          el.style.height = el.style.width;
+          el.style.animationDuration = (0.5 + Math.random() * 0.5) + 's';
+          document.body.appendChild(el);
+          el.addEventListener('animationend', () => el.remove());
+        }, i * 25);
+      }
+    }
+
+    function flashJackpotBanner() {
+      const banner = document.querySelector('.jackpot-banner');
+      banner.style.transform = 'scale(1.08)';
+      banner.style.transition = 'transform 0.15s';
+      setTimeout(() => {
+        banner.style.transform = 'scale(1)';
+      }, 300);
+    }
+
+    // ============================================================
+    // BUILD LIGHTS
+    // ============================================================
+    function buildLights(container, count) {
+      container.innerHTML = '';
+      const classes = ['on-red', 'on-green', 'on-gold'];
+      for (let i = 0; i < count; i++) {
+        const bulb = document.createElement('div');
+        bulb.className = 'light-bulb';
+        container.appendChild(bulb);
+      }
+      animateLights(container, classes);
+    }
+
+    function animateLights(container, classes) {
+      const bulbs = container.querySelectorAll('.light-bulb');
+      let offset = 0;
+      setInterval(() => {
+        bulbs.forEach((b, i) => {
+          b.className = 'light-bulb';
+          const phase = (i + offset) % 4;
+          if (phase < 3) {
+            b.classList.add(classes[phase % classes.length]);
+          }
+        });
+        offset = (offset + 1) % 4;
+      }, 300);
+    }
+
+    // ============================================================
+    // BUILD PAYOUT TABLE
+    // ============================================================
+    function buildPayoutTable() {
+      payoutTable.innerHTML = '';
+
+      const rows = [
+        { symbols: '⭐⭐⭐', desc: PAYOUTS['⭐'].triple, credits: PAYOUTS['⭐'].tripleCredits },
+        { symbols: '⭐⭐', desc: PAYOUTS['⭐'].double, credits: PAYOUTS['⭐'].doubleCredits },
+        { symbols: '🎄🎄🎄', desc: PAYOUTS['🎄'].triple, credits: PAYOUTS['🎄'].tripleCredits },
+        { symbols: '🎄🎄', desc: PAYOUTS['🎄'].double, credits: PAYOUTS['🎄'].doubleCredits },
+        { symbols: '🎅🎅🎅', desc: PAYOUTS['🎅'].triple, credits: PAYOUTS['🎅'].tripleCredits },
+        { symbols: '🎅🎅', desc: PAYOUTS['🎅'].double, credits: PAYOUTS['🎅'].doubleCredits },
+        { symbols: '🎁🎁🎁', desc: PAYOUTS['🎁'].triple, credits: PAYOUTS['🎁'].tripleCredits },
+        { symbols: '🎁🎁', desc: PAYOUTS['🎁'].double, credits: PAYOUTS['🎁'].doubleCredits },
+        { symbols: 'Any x3', desc: PAYOUTS['default'].triple, credits: PAYOUTS['default'].tripleCredits },
+        { symbols: 'Any x2', desc: PAYOUTS['default'].double, credits: PAYOUTS['default'].doubleCredits },
+      ];
+
+      rows.forEach(row => {
+        const div = document.createElement('div');
+        div.className = 'payout-row';
+        div.innerHTML = `
+          <span class="payout-symbols">${row.symbols}</span>
+          <span class="payout-desc">${row.desc}</span>
+          <span class="payout-credits">+${row.credits}</span>
+        `;
+        payoutTable.appendChild(div);
+      });
+    }
+
+    // ============================================================
+    // SPIN FUNCTION (verbatim from spec)
+    // ============================================================
+    function spin() {
+      if (spinning) return;
+      if (credits < SPIN_COST) { showResult('Not enough credits!','lose'); return; }
+      spinning = true; spinBtn.disabled = true;
+      resultEl.classList.remove('show'); winLine.classList.remove('active');
+      credits -= SPIN_COST; totalSpins++; updateCredits();
+      const finalMid = [randomSymbol(),randomSymbol(),randomSymbol()];
+      const finalTop = [randomSymbol(),randomSymbol(),randomSymbol()];
+      const finalBot = [randomSymbol(),randomSymbol(),randomSymbol()];
+      for(let r=0;r<3;r++){
+        buildReelStrip(r);
+        strips[r].style.transform='translateY(0px)';
+        strips[r].style.transition='none';
+        reelWindows[r].classList.add('spinning');
+        reelWindows[r].classList.remove('stopping');
+      }
+      const maxSpeed=symbolHeight*0.6, accelRate=symbolHeight*0.03;
+      const stopDelays=[800,1300,1800], startTime=performance.now();
+      const reelState=[0,1,2].map(()=>({pos:0,speed:0,done:false,targetPos:null}));
+      function animateReels(now){
+        const elapsed=now-startTime; let allDone=true;
+        for(let r=0;r<3;r++){
+          const st=reelState[r]; if(st.done) continue; allDone=false;
+          if(st.targetPos===null){
+            if(st.speed<maxSpeed) st.speed=Math.min(st.speed+accelRate,maxSpeed);
+            st.pos+=st.speed;
+            strips[r].style.transform=`translateY(${-st.pos}px)`;
+            if(elapsed>stopDelays[r]){
+              const curIdx=Math.floor(st.pos/symbolHeight), landIdx=curIdx+8;
+              while(strips[r].children.length<=landIdx+3){
+                const d=document.createElement('div'); d.className='reel-symbol';
+                d.textContent=randomSymbol(); strips[r].appendChild(d);
+              }
+              strips[r].children[landIdx].textContent=finalTop[r];
+              strips[r].children[landIdx+1].textContent=finalMid[r];
+              strips[r].children[landIdx+2].textContent=finalBot[r];
+              st.targetPos=landIdx*symbolHeight;
+              reelWindows[r].classList.remove('spinning');
+              reelWindows[r].classList.add('stopping');
+            }
+          } else {
+            const dist=st.targetPos-st.pos;
+            if(dist<=0.5){
+              st.pos=st.targetPos; st.done=true;
+              strips[r].style.transition='transform 0.15s cubic-bezier(0.34,1.56,0.64,1)';
+              strips[r].style.transform=`translateY(${-st.pos}px)`;
+              setTimeout(()=>{strips[r].style.transition='none';},200);
+              continue;
+            }
+            st.speed=Math.max(dist*0.12,2);
+            st.pos=Math.min(st.pos+st.speed,st.targetPos);
+            strips[r].style.transform=`translateY(${-st.pos}px)`;
+          }
+        }
+        if(!allDone) requestAnimationFrame(animateReels);
+        else { evaluateResult(finalMid); spinning=false; if(credits>=SPIN_COST) spinBtn.disabled=false; }
+      }
+      requestAnimationFrame(animateReels);
+    }
+
+    // ============================================================
+    // SNOWFLAKE INIT
+    // ============================================================
+    function initSnowflakes() {
+      const snowflakes = document.querySelectorAll('.snowflake');
+      snowflakes.forEach((sf, i) => {
+        const leftPct = 5 + Math.random() * 90;
+        const duration = 8 + Math.random() * 7;
+        const delay = -Math.random() * duration;
+        const size = 0.9 + Math.random() * 0.8;
+        sf.style.left = leftPct + '%';
+        sf.style.fontSize = size + 'rem';
+        sf.style.animationDuration = duration + 's';
+        sf.style.animationDelay = delay + 's';
+      });
+    }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    function init() {
+      // Snowflakes
+      initSnowflakes();
+
+      // Build initial reel strips (static display)
+      for (let r = 0; r < 3; r++) {
+        buildReelStrip(r);
+        // Show some symbols initially (not scrolled)
+        strips[r].style.transform = 'translateY(0px)';
+      }
+
+      // Build lights
+      buildLights(lightsTop, 18);
+      buildLights(lightsBottom, 18);
+
+      // Build payout table
+      buildPayoutTable();
+
+      // Update displays
+      updateCredits();
+
+      // Event listeners
+      spinBtn.addEventListener('click', spin);
+
+      refillBtn.addEventListener('click', () => {
+        credits += 100;
+        updateCredits();
+        showResult('+100 Holiday Points added! 🎄', 'win');
+      });
+
+      // Keyboard shortcut: Space or Enter to spin
+      document.addEventListener('keydown', (e) => {
+        if ((e.code === 'Space' || e.code === 'Enter') && !spinning) {
+          e.preventDefault();
+          spin();
+        }
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
