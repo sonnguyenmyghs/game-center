@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Color Match - Stroop Effect</title>
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  body{background:#0a0a1a;color:#fff;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;position:relative}
+
+  /* Back button */
+  .back-btn{position:fixed;top:16px;left:16px;z-index:100;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;text-decoration:none;padding:8px 16px;border-radius:12px;font-size:.9rem;transition:all .2s;display:flex;align-items:center;gap:6px;backdrop-filter:blur(8px)}
+  .back-btn:hover{background:rgba(255,255,255,.15);transform:translateY(-1px)}
+  .back-btn svg{width:16px;height:16px}
+
+  /* Timer bar */
+  .timer-bar-container{position:fixed;top:0;left:0;width:100%;height:6px;background:rgba(255,255,255,.06);z-index:90}
+  .timer-bar{height:100%;width:100%;border-radius:0 3px 3px 0;transition:width .1s linear;background:linear-gradient(90deg,#00e676,#ffd600,#ff3864)}
+
+  /* Screen flash */
+  .screen-flash{position:fixed;inset:0;pointer-events:none;z-index:80;opacity:0;transition:opacity .15s}
+  .screen-flash.wrong{background:radial-gradient(ellipse at center,rgba(255,56,100,.35),rgba(255,0,0,.1));opacity:1}
+
+  /* HUD */
+  .hud{position:fixed;top:20px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:24px;padding:0 70px;z-index:50}
+  .hud-item{text-align:center;font-size:.8rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1px}
+  .hud-value{font-size:1.6rem;font-weight:700;color:#fff;display:block;transition:transform .2s}
+  .hud-value.pop{animation:popScore .35s ease}
+  .hud-time{color:#ffd600}
+
+  /* Streak display */
+  .streak-display{position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:50;font-size:1.3rem;font-weight:800;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;text-transform:uppercase;letter-spacing:2px}
+  .streak-display.visible{opacity:1;animation:streakPulse .6s ease infinite alternate}
+  .streak-text{background:linear-gradient(135deg,#ff3864,#ffd600,#ff3864);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:gradientShift 1s ease infinite;filter:drop-shadow(0 0 12px rgba(255,56,100,.6)) drop-shadow(0 0 24px rgba(255,214,0,.3))}
+
+  /* Game area */
+  .game-container{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;width:100%;max-width:500px;padding:20px;position:relative}
+
+  /* Color word */
+  .color-word-wrapper{flex:1;display:flex;align-items:center;justify-content:center;min-height:200px}
+  .color-word{font-size:4.5rem;font-weight:900;letter-spacing:4px;text-transform:uppercase;transition:opacity .2s,transform .2s;user-select:none}
+  .color-word.fade-out{opacity:0;transform:scale(.85)}
+  .color-word.fade-in{opacity:1;transform:scale(1)}
+  .color-word.shake{animation:shake .4s ease}
+
+  /* Per-question timer */
+  .question-timer{width:120px;height:4px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:12px;overflow:hidden}
+  .question-timer-fill{height:100%;width:100%;background:#00e676;border-radius:2px;transition:width .1s linear,background .3s}
+
+  /* Color buttons */
+  .buttons-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;width:100%;max-width:400px;padding:0 10px 40px}
+  .color-btn{width:100%;aspect-ratio:1;border-radius:50%;border:3px solid rgba(255,255,255,.15);cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s;position:relative;-webkit-tap-highlight-color:transparent;outline:none}
+  .color-btn:active{transform:scale(.9)}
+  .color-btn::after{content:attr(data-label);position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:.65rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;font-weight:600}
+  .color-btn.correct-pulse{animation:correctPulse .5s ease;border-color:#00e676}
+  .color-btn.wrong-pulse{animation:wrongPulse .4s ease;border-color:#ff3864}
+
+  /* Score popup */
+  .score-popup{position:fixed;z-index:70;font-size:1.5rem;font-weight:800;pointer-events:none;animation:scorePopUp .8s ease forwards}
+  .score-popup.positive{color:#00e676}
+  .score-popup.negative{color:#ff3864}
+
+  /* Start screen */
+  .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;z-index:60;background:#0a0a1a;transition:opacity .4s,visibility .4s}
+  .screen.hidden{opacity:0;visibility:hidden;pointer-events:none}
+
+  .game-title{font-size:2.8rem;font-weight:900;letter-spacing:2px;margin-bottom:8px;background:linear-gradient(135deg,#ff3864,#3b82f6,#00e676,#ffd600);background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:gradientShift 4s ease infinite}
+  .game-subtitle{font-size:1rem;color:rgba(255,255,255,.5);margin-bottom:32px;letter-spacing:3px;text-transform:uppercase}
+
+  .instructions{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:24px;margin-bottom:32px;max-width:380px;width:100%;text-align:left}
+  .instructions h3{font-size:1rem;margin-bottom:12px;color:rgba(255,255,255,.7)}
+  .instructions p{font-size:.9rem;color:rgba(255,255,255,.55);line-height:1.6;margin-bottom:8px}
+  .instructions .example{text-align:center;margin:16px 0;padding:12px;background:rgba(255,255,255,.03);border-radius:10px}
+  .instructions .example-word{font-size:2rem;font-weight:800}
+  .instructions .example-hint{font-size:.75rem;color:rgba(255,255,255,.4);margin-top:6px}
+
+  .play-btn{background:linear-gradient(135deg,#ff3864,#3b82f6);color:#fff;border:none;padding:16px 48px;border-radius:50px;font-size:1.2rem;font-weight:700;cursor:pointer;letter-spacing:1px;transition:transform .2s,box-shadow .2s;box-shadow:0 4px 24px rgba(255,56,100,.3)}
+  .play-btn:hover{transform:translateY(-2px);box-shadow:0 6px 32px rgba(255,56,100,.4)}
+  .play-btn:active{transform:scale(.96)}
+
+  .high-score-start{margin-top:16px;font-size:.85rem;color:rgba(255,255,255,.35)}
+
+  /* Game Over screen */
+  .gameover-title{font-size:2.2rem;font-weight:900;margin-bottom:24px;color:rgba(255,255,255,.9)}
+  .final-score{font-size:4rem;font-weight:900;margin-bottom:8px;background:linear-gradient(135deg,#ff3864,#ffd600);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .final-label{font-size:.85rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:2px;margin-bottom:24px}
+
+  .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px;max-width:360px;width:100%}
+  .stat-item{text-align:center;background:rgba(255,255,255,.05);border-radius:12px;padding:14px 8px}
+  .stat-value{font-size:1.4rem;font-weight:700;display:block;margin-bottom:4px}
+  .stat-label{font-size:.7rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px}
+
+  .new-high{font-size:1rem;color:#ffd600;font-weight:700;margin-bottom:16px;animation:streakPulse .8s ease infinite alternate}
+
+  /* Animations */
+  @keyframes gradientShift{
+    0%{background-position:0% 50%}
+    50%{background-position:100% 50%}
+    100%{background-position:0% 50%}
+  }
+  @keyframes popScore{
+    0%{transform:scale(1)}
+    50%{transform:scale(1.3)}
+    100%{transform:scale(1)}
+  }
+  @keyframes shake{
+    0%,100%{transform:translateX(0)}
+    20%{transform:translateX(-12px)}
+    40%{transform:translateX(12px)}
+    60%{transform:translateX(-8px)}
+    80%{transform:translateX(8px)}
+  }
+  @keyframes correctPulse{
+    0%{box-shadow:0 0 0 0 rgba(0,230,118,.6)}
+    50%{box-shadow:0 0 0 14px rgba(0,230,118,0);transform:scale(1.1)}
+    100%{box-shadow:0 0 0 0 rgba(0,230,118,0);transform:scale(1)}
+  }
+  @keyframes wrongPulse{
+    0%{transform:scale(1)}
+    30%{transform:scale(.85)}
+    100%{transform:scale(1)}
+  }
+  @keyframes scorePopUp{
+    0%{opacity:1;transform:translateY(0) scale(1)}
+    60%{opacity:1;transform:translateY(-50px) scale(1.2)}
+    100%{opacity:0;transform:translateY(-80px) scale(.8)}
+  }
+  @keyframes streakPulse{
+    0%{transform:translateX(-50%) scale(1)}
+    100%{transform:translateX(-50%) scale(1.08)}
+  }
+
+  /* Responsive */
+  @media(max-width:380px){
+    .color-word{font-size:3.2rem}
+    .game-title{font-size:2.2rem}
+    .buttons-row{gap:10px;padding:0 6px 32px}
+  }
+  @media(min-height:800px){
+    .color-word{font-size:5.5rem}
+  }
+</style>
+</head>
+<body>
+
+<!-- Back button -->
+<a href="../index.html" class="back-btn">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  Back
+</a>
+
+<!-- Timer bar -->
+<div class="timer-bar-container" id="timerBarContainer" style="display:none">
+  <div class="timer-bar" id="timerBar"></div>
+</div>
+
+<!-- Screen flash overlay -->
+<div class="screen-flash" id="screenFlash"></div>
+
+<!-- HUD -->
+<div class="hud" id="hud" style="display:none">
+  <div class="hud-item">
+    <span class="hud-value" id="hudScore">0</span>
+    Score
+  </div>
+  <div class="hud-item">
+    <span class="hud-value hud-time" id="hudTime">30</span>
+    Time
+  </div>
+</div>
+
+<!-- Streak display -->
+<div class="streak-display" id="streakDisplay">
+  <span class="streak-text" id="streakText"></span>
+</div>
+
+<!-- Start screen -->
+<div class="screen" id="startScreen">
+  <div class="game-title">Color Match</div>
+  <div class="game-subtitle">Stroop Effect</div>
+  <div class="instructions">
+    <h3>How to Play</h3>
+    <p>A color word appears on screen, but it's printed in a <strong>different</strong> color.</p>
+    <div class="example">
+      <div class="example-word" style="color:#3b82f6">RED</div>
+      <div class="example-hint">The word says "RED" but the color is BLUE. Tap BLUE!</div>
+    </div>
+    <p>Tap the button matching the <strong>text color</strong>, not what the word says. Build streaks for bonus points!</p>
+  </div>
+  <button class="play-btn" id="startBtn">Start Game</button>
+  <div class="high-score-start" id="highScoreStart"></div>
+</div>
+
+<!-- Game Over screen -->
+<div class="screen hidden" id="gameOverScreen">
+  <div class="gameover-title">Game Over</div>
+  <div class="final-score" id="finalScore">0</div>
+  <div class="final-label">Final Score</div>
+  <div class="new-high hidden" id="newHighLabel">New High Score!</div>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <span class="stat-value" id="statAccuracy">0%</span>
+      <span class="stat-label">Accuracy</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value" id="statBestStreak">0</span>
+      <span class="stat-label">Best Streak</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value" id="statHighScore">0</span>
+      <span class="stat-label">High Score</span>
+    </div>
+  </div>
+  <button class="play-btn" id="playAgainBtn">Play Again</button>
+</div>
+
+<!-- Game area -->
+<div class="game-container" id="gameContainer" style="display:none">
+  <div class="color-word-wrapper">
+    <div>
+      <div class="color-word" id="colorWord">RED</div>
+      <div class="question-timer" id="questionTimer">
+        <div class="question-timer-fill" id="questionTimerFill"></div>
+      </div>
+    </div>
+  </div>
+  <div class="buttons-row" id="buttonsRow"></div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  // Configuration
+  const COLORS = [
+    { name: 'RED', hex: '#ff3864' },
+    { name: 'BLUE', hex: '#3b82f6' },
+    { name: 'GREEN', hex: '#00e676' },
+    { name: 'YELLOW', hex: '#ffd600' },
+  ];
+  const GAME_DURATION = 30;
+  const POINTS_CORRECT = 10;
+  const POINTS_WRONG = -5;
+  const STREAK_BONUS = 5;
+  const BASE_QUESTION_TIME = 4000; // ms per question at start
+  const MIN_QUESTION_TIME = 1200;  // minimum ms per question
+  const LS_KEY = 'colorMatch_highScore';
+
+  // DOM refs
+  const startScreen = document.getElementById('startScreen');
+  const gameOverScreen = document.getElementById('gameOverScreen');
+  const gameContainer = document.getElementById('gameContainer');
+  const hud = document.getElementById('hud');
+  const hudScore = document.getElementById('hudScore');
+  const hudTime = document.getElementById('hudTime');
+  const timerBarContainer = document.getElementById('timerBarContainer');
+  const timerBar = document.getElementById('timerBar');
+  const colorWord = document.getElementById('colorWord');
+  const buttonsRow = document.getElementById('buttonsRow');
+  const screenFlash = document.getElementById('screenFlash');
+  const streakDisplay = document.getElementById('streakDisplay');
+  const streakText = document.getElementById('streakText');
+  const questionTimerFill = document.getElementById('questionTimerFill');
+  const startBtn = document.getElementById('startBtn');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+  const highScoreStart = document.getElementById('highScoreStart');
+  const finalScore = document.getElementById('finalScore');
+  const newHighLabel = document.getElementById('newHighLabel');
+  const statAccuracy = document.getElementById('statAccuracy');
+  const statBestStreak = document.getElementById('statBestStreak');
+  const statHighScore = document.getElementById('statHighScore');
+
+  // Game state
+  let score = 0;
+  let streak = 0;
+  let bestStreak = 0;
+  let totalQuestions = 0;
+  let correctAnswers = 0;
+  let timeLeft = GAME_DURATION;
+  let currentTextColorIndex = -1;
+  let gameRunning = false;
+  let gameTimerInterval = null;
+  let questionTimeout = null;
+  let questionTimerInterval = null;
+  let questionTimeLeft = 0;
+  let questionTimeMax = 0;
+  let inputLocked = false;
+
+  // High score
+  function getHighScore() {
+    return parseInt(localStorage.getItem(LS_KEY)) || 0;
+  }
+  function setHighScore(val) {
+    localStorage.setItem(LS_KEY, val);
+  }
+
+  // Init color buttons
+  function createButtons() {
+    buttonsRow.innerHTML = '';
+    COLORS.forEach((c, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'color-btn';
+      btn.style.background = c.hex;
+      btn.style.boxShadow = '0 4px 20px ' + c.hex + '40';
+      btn.dataset.label = c.name.toLowerCase();
+      btn.dataset.index = i;
+      btn.addEventListener('click', () => handleAnswer(i));
+      btn.addEventListener('touchstart', (e) => { e.preventDefault(); handleAnswer(i); }, { passive: false });
+      buttonsRow.appendChild(btn);
+    });
+  }
+
+  // Generate next question
+  function nextQuestion() {
+    inputLocked = false;
+    // Pick word and color, ensure they differ
+    let wordIndex, colorIndex;
+    do {
+      wordIndex = Math.floor(Math.random() * COLORS.length);
+      colorIndex = Math.floor(Math.random() * COLORS.length);
+    } while (wordIndex === colorIndex);
+
+    currentTextColorIndex = colorIndex;
+
+    // Fade out then in
+    colorWord.classList.add('fade-out');
+    colorWord.classList.remove('fade-in');
+
+    setTimeout(() => {
+      colorWord.textContent = COLORS[wordIndex].name;
+      colorWord.style.color = COLORS[colorIndex].hex;
+      colorWord.style.textShadow = '0 0 30px ' + COLORS[colorIndex].hex + '80, 0 0 60px ' + COLORS[colorIndex].hex + '40';
+      colorWord.classList.remove('fade-out');
+      colorWord.classList.add('fade-in');
+    }, 150);
+
+    // Per-question timer
+    startQuestionTimer();
+    totalQuestions++;
+  }
+
+  // Calculate time allowed per question based on score
+  function getQuestionTime() {
+    const reduction = Math.floor(score / 30) * 200;
+    return Math.max(MIN_QUESTION_TIME, BASE_QUESTION_TIME - reduction);
+  }
+
+  function startQuestionTimer() {
+    clearTimeout(questionTimeout);
+    clearInterval(questionTimerInterval);
+
+    questionTimeMax = getQuestionTime();
+    questionTimeLeft = questionTimeMax;
+    questionTimerFill.style.width = '100%';
+    questionTimerFill.style.background = '#00e676';
+
+    questionTimerInterval = setInterval(() => {
+      questionTimeLeft -= 50;
+      if (questionTimeLeft < 0) questionTimeLeft = 0;
+      const pct = (questionTimeLeft / questionTimeMax) * 100;
+      questionTimerFill.style.width = pct + '%';
+      // Color transition
+      if (pct < 30) {
+        questionTimerFill.style.background = '#ff3864';
+      } else if (pct < 60) {
+        questionTimerFill.style.background = '#ffd600';
+      } else {
+        questionTimerFill.style.background = '#00e676';
+      }
+    }, 50);
+
+    questionTimeout = setTimeout(() => {
+      if (!gameRunning) return;
+      // Time ran out on question - auto wrong
+      handleWrong(null);
+      nextQuestion();
+    }, questionTimeMax);
+  }
+
+  // Handle player answer
+  function handleAnswer(index) {
+    if (!gameRunning || inputLocked) return;
+    inputLocked = true;
+    clearTimeout(questionTimeout);
+    clearInterval(questionTimerInterval);
+
+    const btn = buttonsRow.children[index];
+
+    if (index === currentTextColorIndex) {
+      handleCorrect(btn);
+    } else {
+      handleWrong(btn);
+    }
+
+    // Small delay then next question
+    setTimeout(() => {
+      if (gameRunning) nextQuestion();
+    }, 300);
+  }
+
+  function handleCorrect(btn) {
+    correctAnswers++;
+    streak++;
+    if (streak > bestStreak) bestStreak = streak;
+
+    const streakBonus = (streak > 1) ? STREAK_BONUS * (streak - 1) : 0;
+    const points = POINTS_CORRECT + streakBonus;
+    score = Math.max(0, score + points);
+    updateScore();
+
+    // Button pulse
+    btn.classList.add('correct-pulse');
+    setTimeout(() => btn.classList.remove('correct-pulse'), 500);
+
+    // Score popup
+    showScorePopup('+' + points, true);
+
+    // Update streak display
+    updateStreakDisplay();
+  }
+
+  function handleWrong(btn) {
+    streak = 0;
+    score = Math.max(0, score + POINTS_WRONG);
+    updateScore();
+
+    // Button pulse
+    if (btn) {
+      btn.classList.add('wrong-pulse');
+      setTimeout(() => btn.classList.remove('wrong-pulse'), 400);
+    }
+
+    // Screen flash
+    screenFlash.classList.add('wrong');
+    setTimeout(() => screenFlash.classList.remove('wrong'), 200);
+
+    // Shake word
+    colorWord.classList.add('shake');
+    setTimeout(() => colorWord.classList.remove('shake'), 400);
+
+    // Score popup
+    showScorePopup(POINTS_WRONG.toString(), false);
+
+    // Hide streak
+    updateStreakDisplay();
+  }
+
+  function showScorePopup(text, positive) {
+    const popup = document.createElement('div');
+    popup.className = 'score-popup ' + (positive ? 'positive' : 'negative');
+    popup.textContent = text;
+    popup.style.left = '50%';
+    popup.style.top = '40%';
+    popup.style.transform = 'translateX(-50%)';
+    document.body.appendChild(popup);
+    setTimeout(() => popup.remove(), 800);
+  }
+
+  function updateScore() {
+    hudScore.textContent = score;
+    hudScore.classList.remove('pop');
+    void hudScore.offsetWidth; // reflow
+    hudScore.classList.add('pop');
+  }
+
+  function updateStreakDisplay() {
+    if (streak >= 2) {
+      streakText.textContent = streak + 'x STREAK!';
+      streakDisplay.classList.add('visible');
+    } else {
+      streakDisplay.classList.remove('visible');
+    }
+  }
+
+  // Game timer
+  function startGameTimer() {
+    timeLeft = GAME_DURATION;
+    hudTime.textContent = timeLeft;
+    timerBar.style.width = '100%';
+
+    gameTimerInterval = setInterval(() => {
+      timeLeft -= 0.1;
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        endGame();
+        return;
+      }
+      hudTime.textContent = Math.ceil(timeLeft);
+      const pct = (timeLeft / GAME_DURATION) * 100;
+      timerBar.style.width = pct + '%';
+    }, 100);
+  }
+
+  // Start game
+  function startGame() {
+    score = 0;
+    streak = 0;
+    bestStreak = 0;
+    totalQuestions = 0;
+    correctAnswers = 0;
+    gameRunning = true;
+    inputLocked = false;
+
+    hudScore.textContent = '0';
+    streakDisplay.classList.remove('visible');
+
+    startScreen.classList.add('hidden');
+    gameOverScreen.classList.add('hidden');
+    gameContainer.style.display = 'flex';
+    hud.style.display = 'flex';
+    timerBarContainer.style.display = 'block';
+
+    createButtons();
+    startGameTimer();
+    nextQuestion();
+  }
+
+  // End game
+  function endGame() {
+    gameRunning = false;
+    clearInterval(gameTimerInterval);
+    clearTimeout(questionTimeout);
+    clearInterval(questionTimerInterval);
+
+    gameContainer.style.display = 'none';
+    hud.style.display = 'none';
+    timerBarContainer.style.display = 'none';
+
+    // Stats
+    const highScore = getHighScore();
+    const isNew = score > highScore;
+    if (isNew) setHighScore(score);
+
+    const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+
+    // Animate final score count-up
+    finalScore.textContent = '0';
+    animateCountUp(finalScore, score, 800);
+
+    statAccuracy.textContent = accuracy + '%';
+    statBestStreak.textContent = bestStreak;
+    statHighScore.textContent = isNew ? score : highScore;
+
+    if (isNew && score > 0) {
+      newHighLabel.classList.remove('hidden');
+    } else {
+      newHighLabel.classList.add('hidden');
+    }
+
+    gameOverScreen.classList.remove('hidden');
+  }
+
+  function animateCountUp(el, target, duration) {
+    const start = performance.now();
+    function tick(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease out quad
+      const eased = 1 - (1 - progress) * (1 - progress);
+      el.textContent = Math.round(eased * target);
+      if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // Show high score on start screen
+  function showStartHighScore() {
+    const hs = getHighScore();
+    if (hs > 0) {
+      highScoreStart.textContent = 'High Score: ' + hs;
+    } else {
+      highScoreStart.textContent = '';
+    }
+  }
+
+  // Event listeners
+  startBtn.addEventListener('click', startGame);
+  playAgainBtn.addEventListener('click', () => {
+    showStartHighScore();
+    startGame();
+  });
+
+  // Prevent double-tap zoom on iOS
+  document.addEventListener('dblclick', (e) => e.preventDefault());
+
+  // Init
+  showStartHighScore();
+})();
+</script>
+</body>
+</html>

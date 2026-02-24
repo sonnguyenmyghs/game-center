@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Scratch Card - Game Center</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a1a;
+      color: #fff;
+      min-height: 100vh;
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(72, 49, 212, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(255, 56, 100, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 80%, rgba(0, 198, 255, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px 16px 40px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Back button */
+    .back-btn {
+      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      font-size: 0.95rem;
+      padding: 8px 12px;
+      border-radius: 10px;
+      transition: all 0.2s;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 8px;
+    }
+
+    .back-btn:hover {
+      color: #fff;
+      background: rgba(255,255,255,0.1);
+    }
+
+    .back-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Title */
+    .title {
+      font-size: 2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #c0c0c0, #ffffff, #e8d44d, #ffffff, #c0c0c0);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+      animation: titleShimmer 3s ease-in-out infinite;
+      text-align: center;
+    }
+
+    @keyframes titleShimmer {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .subtitle {
+      color: rgba(255,255,255,0.5);
+      font-size: 0.85rem;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    /* Card wrapper */
+    .card-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 360px;
+      aspect-ratio: 1 / 1.1;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow:
+        0 4px 24px rgba(0,0,0,0.4),
+        0 0 0 1px rgba(255,255,255,0.1),
+        inset 0 1px 0 rgba(255,255,255,0.1);
+      animation: cardFloat 4s ease-in-out infinite;
+    }
+
+    @keyframes cardFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .card-wrapper.revealed {
+      animation: none;
+    }
+
+    /* Prize grid underneath */
+    .prize-layer {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(145deg, #1a1a2e, #16213e);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .prize-label {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.4);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+
+    .prize-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 280px;
+    }
+
+    .prize-cell {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.4rem;
+      background: rgba(255,255,255,0.05);
+      border-radius: 14px;
+      border: 2px solid rgba(255,255,255,0.08);
+      transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .prize-cell.match {
+      border-color: rgba(255, 215, 0, 0.6);
+      background: rgba(255, 215, 0, 0.12);
+      animation: matchPulse 1.5s ease-in-out infinite;
+    }
+
+    .prize-cell.match::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(255,215,0,0.3), transparent, rgba(255,215,0,0.3));
+      animation: matchGlow 2s ease-in-out infinite;
+    }
+
+    @keyframes matchPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    @keyframes matchGlow {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+
+    .prize-result-text {
+      margin-top: 16px;
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.6);
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+
+    .prize-result-text.visible {
+      opacity: 1;
+    }
+
+    /* Canvas scratch overlay */
+    .scratch-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+      border-radius: 20px;
+      z-index: 2;
+    }
+
+    .scratch-canvas:active {
+      cursor: grabbing;
+    }
+
+    .scratch-canvas.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.8s ease;
+    }
+
+    /* Shimmer overlay on the scratch surface */
+    .shimmer-overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      z-index: 3;
+      pointer-events: none;
+      background: linear-gradient(
+        105deg,
+        transparent 30%,
+        rgba(255,255,255,0.08) 45%,
+        rgba(255,255,255,0.15) 50%,
+        rgba(255,255,255,0.08) 55%,
+        transparent 70%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 3s ease-in-out infinite;
+    }
+
+    .shimmer-overlay.hidden {
+      display: none;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Scratch instruction */
+    .scratch-hint {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      opacity: 1;
+      transition: opacity 0.4s;
+    }
+
+    .scratch-hint.hidden {
+      opacity: 0;
+    }
+
+    .scratch-hint-icon {
+      font-size: 2.5rem;
+      animation: hintBounce 1.5s ease-in-out infinite;
+    }
+
+    .scratch-hint-text {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.8);
+      font-weight: 600;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+
+    @keyframes hintBounce {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      25% { transform: translateY(-6px) rotate(-5deg); }
+      75% { transform: translateY(-6px) rotate(5deg); }
+    }
+
+    /* Scratch particles */
+    .particle-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .scratch-particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: particleFly 0.6s ease-out forwards;
+    }
+
+    @keyframes particleFly {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(var(--dx), var(--dy)) scale(0);
+      }
+    }
+
+    /* Scratch progress bar */
+    .progress-bar-container {
+      width: 100%;
+      max-width: 360px;
+      margin-top: 16px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .progress-bar-container.visible {
+      opacity: 1;
+    }
+
+    .progress-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 6px;
+    }
+
+    .progress-bar-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #6c5ce7, #00c6ff);
+      border-radius: 2px;
+      transition: width 0.15s;
+    }
+
+    /* New card button */
+    .new-card-btn {
+      margin-top: 20px;
+      padding: 14px 36px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #6c5ce7, #a855f7);
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 16px rgba(108, 92, 231, 0.3);
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+    }
+
+    .new-card-btn.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .new-card-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(108, 92, 231, 0.5);
+    }
+
+    .new-card-btn:active {
+      transform: translateY(0) scale(0.97);
+    }
+
+    /* Result popup overlay */
+    .result-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0);
+      pointer-events: none;
+      transition: background 0.4s;
+      padding: 20px;
+    }
+
+    .result-overlay.active {
+      background: rgba(0,0,0,0.65);
+      pointer-events: auto;
+    }
+
+    .result-popup {
+      background: linear-gradient(145deg, #1e1e3a, #12122a);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px;
+      padding: 40px 32px;
+      text-align: center;
+      max-width: 360px;
+      width: 100%;
+      transform: scale(0.8) translateY(20px);
+      opacity: 0;
+      transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .result-overlay.active .result-popup {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+
+    .result-popup::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 26px;
+      z-index: -1;
+    }
+
+    /* Tier-based popup styling */
+    .result-popup.tier-legendary::before {
+      background: linear-gradient(135deg, #ffd700, #ff8c00, #ffd700);
+      animation: tierGlow 2s ease-in-out infinite;
+    }
+    .result-popup.tier-legendary {
+      box-shadow: 0 0 60px rgba(255, 215, 0, 0.3);
+    }
+
+    .result-popup.tier-epic::before {
+      background: linear-gradient(135deg, #a855f7, #6c5ce7, #a855f7);
+      animation: tierGlow 2s ease-in-out infinite;
+    }
+    .result-popup.tier-epic {
+      box-shadow: 0 0 40px rgba(168, 85, 247, 0.3);
+    }
+
+    .result-popup.tier-rare::before {
+      background: linear-gradient(135deg, #00c6ff, #0072ff, #00c6ff);
+      animation: tierGlow 2s ease-in-out infinite;
+    }
+    .result-popup.tier-rare {
+      box-shadow: 0 0 30px rgba(0, 198, 255, 0.3);
+    }
+
+    .result-popup.tier-common::before {
+      background: linear-gradient(135deg, #4ade80, #22c55e, #4ade80);
+      animation: tierGlow 2s ease-in-out infinite;
+    }
+    .result-popup.tier-common {
+      box-shadow: 0 0 20px rgba(74, 222, 128, 0.2);
+    }
+
+    .result-popup.tier-none::before {
+      background: rgba(255,255,255,0.1);
+    }
+
+    @keyframes tierGlow {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+
+    .result-emoji {
+      font-size: 4rem;
+      margin-bottom: 12px;
+      display: block;
+      animation: resultBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      animation-delay: 0.3s;
+    }
+
+    @keyframes resultBounce {
+      0% { transform: scale(0); }
+      100% { transform: scale(1); }
+    }
+
+    .result-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .result-title.tier-legendary { color: #ffd700; }
+    .result-title.tier-epic { color: #a855f7; }
+    .result-title.tier-rare { color: #00c6ff; }
+    .result-title.tier-common { color: #4ade80; }
+    .result-title.tier-none { color: rgba(255,255,255,0.6); }
+
+    .result-desc {
+      font-size: 0.95rem;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .result-btn {
+      padding: 14px 36px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #6c5ce7, #a855f7);
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 16px rgba(108, 92, 231, 0.3);
+    }
+
+    .result-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(108, 92, 231, 0.5);
+    }
+
+    .result-btn:active {
+      transform: translateY(0) scale(0.97);
+    }
+
+    /* Confetti */
+    .confetti-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 250;
+      overflow: hidden;
+    }
+
+    .confetti-piece {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      top: -10px;
+      animation: confettiFall var(--fall-duration) linear forwards;
+    }
+
+    @keyframes confettiFall {
+      0% {
+        transform: translateX(0) rotateZ(0deg) rotateY(0deg);
+        opacity: 1;
+      }
+      75% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateX(var(--drift)) rotateZ(var(--spin)) rotateY(720deg);
+        opacity: 0;
+        top: 110vh;
+      }
+    }
+
+    /* Stats row */
+    .stats-row {
+      display: flex;
+      gap: 16px;
+      margin-top: 16px;
+      width: 100%;
+      max-width: 360px;
+      justify-content: center;
+    }
+
+    .stat-box {
+      flex: 1;
+      text-align: center;
+      padding: 12px 8px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .stat-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.4);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 2px;
+    }
+
+    /* Card entrance animation */
+    @keyframes cardEnter {
+      0% {
+        transform: scale(0.9) rotateX(5deg);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(1) rotateX(0deg);
+        opacity: 1;
+      }
+    }
+
+    .card-wrapper.entering {
+      animation: cardEnter 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    /* Responsive */
+    @media (max-width: 380px) {
+      .prize-cell {
+        font-size: 1.8rem;
+      }
+      .title {
+        font-size: 1.6rem;
+      }
+    }
+
+    @media (min-height: 800px) {
+      .container {
+        padding-top: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="../index.html" class="back-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+      Back
+    </a>
+
+    <h1 class="title">Scratch Card</h1>
+    <p class="subtitle">Scratch to reveal your prize!</p>
+
+    <div class="card-wrapper entering" id="cardWrapper">
+      <!-- Prize layer underneath -->
+      <div class="prize-layer" id="prizeLayer">
+        <div class="prize-label">Match 3 to win!</div>
+        <div class="prize-grid" id="prizeGrid"></div>
+        <div class="prize-result-text" id="prizeResultText"></div>
+      </div>
+      <!-- Canvas scratch overlay -->
+      <canvas class="scratch-canvas" id="scratchCanvas"></canvas>
+      <!-- Shimmer effect on scratch surface -->
+      <div class="shimmer-overlay" id="shimmerOverlay"></div>
+      <!-- Scratch hint -->
+      <div class="scratch-hint" id="scratchHint">
+        <span class="scratch-hint-icon">&#x1f91a;</span>
+        <span class="scratch-hint-text">Scratch here!</span>
+      </div>
+    </div>
+
+    <div class="progress-bar-container" id="progressBar">
+      <div class="progress-bar-label">
+        <span>Scratched</span>
+        <span id="progressPercent">0%</span>
+      </div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <button class="new-card-btn" id="newCardBtn">New Card</button>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-value" id="statPlayed">0</div>
+        <div class="stat-label">Played</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="statWins">0</div>
+        <div class="stat-label">Wins</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="statBest">-</div>
+        <div class="stat-label">Best</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Particle container for scratch sparkles -->
+  <div class="particle-container" id="particleContainer"></div>
+
+  <!-- Result popup overlay -->
+  <div class="result-overlay" id="resultOverlay">
+    <div class="result-popup" id="resultPopup">
+      <span class="result-emoji" id="resultEmoji"></span>
+      <div class="result-title" id="resultTitle"></div>
+      <div class="result-desc" id="resultDesc"></div>
+      <button class="result-btn" id="resultBtn">New Card</button>
+    </div>
+  </div>
+
+  <!-- Confetti container -->
+  <div class="confetti-container" id="confettiContainer"></div>
+
+  <script>
+    // ============================================================
+    // PRIZE CONFIGURATION - EASY TO CUSTOMIZE
+    // ============================================================
+    const PRIZES = [
+      { symbol: '\u{1F48E}', label: 'Diamond Prize', tier: 'legendary', probability: 0.05 },
+      { symbol: '\u{1F3C6}', label: 'Gold Prize',    tier: 'epic',      probability: 0.10 },
+      { symbol: '\u{2B50}',  label: '500 Points',    tier: 'rare',      probability: 0.20 },
+      { symbol: '\u{1F381}', label: 'Gift Box',      tier: 'common',    probability: 0.25 },
+      { symbol: '\u{1F388}', label: '100 Points',    tier: 'common',    probability: 0.25 },
+      { symbol: '\u{1F504}', label: 'Try Again',     tier: 'none',      probability: 0.15 },
+    ];
+
+    // Auto-reveal threshold (percentage scratched)
+    const AUTO_REVEAL_THRESHOLD = 0.60;
+    // Scratch brush radius
+    const BRUSH_RADIUS = 28;
+    // How many cells must match for a win
+    const MATCH_COUNT = 3;
+    // ============================================================
+
+    // DOM Elements
+    const cardWrapper = document.getElementById('cardWrapper');
+    const prizeGrid = document.getElementById('prizeGrid');
+    const prizeResultText = document.getElementById('prizeResultText');
+    const scratchCanvas = document.getElementById('scratchCanvas');
+    const shimmerOverlay = document.getElementById('shimmerOverlay');
+    const scratchHint = document.getElementById('scratchHint');
+    const particleContainer = document.getElementById('particleContainer');
+    const progressBarContainer = document.getElementById('progressBar');
+    const progressPercent = document.getElementById('progressPercent');
+    const progressFill = document.getElementById('progressFill');
+    const newCardBtn = document.getElementById('newCardBtn');
+    const resultOverlay = document.getElementById('resultOverlay');
+    const resultPopup = document.getElementById('resultPopup');
+    const resultEmoji = document.getElementById('resultEmoji');
+    const resultTitle = document.getElementById('resultTitle');
+    const resultDesc = document.getElementById('resultDesc');
+    const resultBtn = document.getElementById('resultBtn');
+    const confettiContainer = document.getElementById('confettiContainer');
+    const statPlayed = document.getElementById('statPlayed');
+    const statWins = document.getElementById('statWins');
+    const statBest = document.getElementById('statBest');
+
+    // State
+    let ctx;
+    let isScratching = false;
+    let hasStartedScratching = false;
+    let isRevealed = false;
+    let currentGrid = [];
+    let winResult = null;
+    let stats = { played: 0, wins: 0, best: null };
+    let lastScratchPos = null;
+    let scratchCheckInterval = null;
+
+    // Load stats
+    try {
+      const saved = JSON.parse(localStorage.getItem('scratchCardStats'));
+      if (saved) stats = saved;
+    } catch(e) {}
+    updateStatsDisplay();
+
+    // Initialize game
+    initGame();
+
+    function initGame() {
+      isRevealed = false;
+      hasStartedScratching = false;
+      lastScratchPos = null;
+      winResult = null;
+
+      // Generate grid
+      currentGrid = generateGrid();
+      renderGrid();
+
+      // Setup canvas
+      setupCanvas();
+
+      // Reset UI
+      scratchHint.classList.remove('hidden');
+      shimmerOverlay.classList.remove('hidden');
+      scratchCanvas.classList.remove('hidden');
+      newCardBtn.classList.remove('visible');
+      progressBarContainer.classList.remove('visible');
+      progressFill.style.width = '0%';
+      progressPercent.textContent = '0%';
+      prizeResultText.classList.remove('visible');
+      prizeResultText.textContent = '';
+      resultOverlay.classList.remove('active');
+      resultPopup.className = 'result-popup';
+
+      // Card entrance animation
+      cardWrapper.classList.remove('entering', 'revealed');
+      void cardWrapper.offsetWidth; // reflow
+      cardWrapper.classList.add('entering');
+
+      // Clear any leftover confetti
+      confettiContainer.innerHTML = '';
+
+      // Reset match highlights
+      document.querySelectorAll('.prize-cell').forEach(c => c.classList.remove('match'));
+
+      // Clear interval
+      if (scratchCheckInterval) clearInterval(scratchCheckInterval);
+    }
+
+    function weightedRandom() {
+      const r = Math.random();
+      let cumulative = 0;
+      for (const prize of PRIZES) {
+        cumulative += prize.probability;
+        if (r <= cumulative) return prize;
+      }
+      return PRIZES[PRIZES.length - 1];
+    }
+
+    function generateGrid() {
+      // Decide outcome first
+      const outcome = weightedRandom();
+      const grid = [];
+
+      if (outcome.tier !== 'none') {
+        // Win scenario: place exactly 3 of the winning symbol
+        // Pick 3 random positions for the match
+        const positions = [];
+        while (positions.length < MATCH_COUNT) {
+          const pos = Math.floor(Math.random() * 9);
+          if (!positions.includes(pos)) positions.push(pos);
+        }
+
+        // Fill all 9 cells
+        for (let i = 0; i < 9; i++) {
+          if (positions.includes(i)) {
+            grid.push({ ...outcome, isMatch: true });
+          } else {
+            // Pick a different symbol for non-matching cells
+            let other;
+            do {
+              other = PRIZES[Math.floor(Math.random() * PRIZES.length)];
+            } while (other.symbol === outcome.symbol);
+            grid.push({ ...other, isMatch: false });
+          }
+        }
+
+        winResult = outcome;
+      } else {
+        // Lose scenario: fill with random symbols, but make sure no 3 match
+        let attempts = 0;
+        let tempGrid;
+        do {
+          tempGrid = [];
+          for (let i = 0; i < 9; i++) {
+            const p = PRIZES[Math.floor(Math.random() * PRIZES.length)];
+            tempGrid.push({ ...p, isMatch: false });
+          }
+          attempts++;
+        } while (hasThreeMatch(tempGrid) && attempts < 50);
+
+        grid.push(...tempGrid);
+        winResult = null;
+      }
+
+      return grid;
+    }
+
+    function hasThreeMatch(grid) {
+      const counts = {};
+      for (const cell of grid) {
+        counts[cell.symbol] = (counts[cell.symbol] || 0) + 1;
+        if (counts[cell.symbol] >= MATCH_COUNT) return true;
+      }
+      return false;
+    }
+
+    function renderGrid() {
+      prizeGrid.innerHTML = '';
+      currentGrid.forEach((cell, i) => {
+        const el = document.createElement('div');
+        el.className = 'prize-cell';
+        el.textContent = cell.symbol;
+        el.dataset.index = i;
+        prizeGrid.appendChild(el);
+      });
+    }
+
+    function setupCanvas() {
+      const rect = cardWrapper.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      scratchCanvas.width = rect.width * dpr;
+      scratchCanvas.height = rect.height * dpr;
+      scratchCanvas.style.width = rect.width + 'px';
+      scratchCanvas.style.height = rect.height + 'px';
+
+      ctx = scratchCanvas.getContext('2d', { willReadFrequently: true });
+      ctx.scale(dpr, dpr);
+
+      // Draw metallic silver scratch surface
+      const w = rect.width;
+      const h = rect.height;
+
+      // Base gradient
+      const grad = ctx.createLinearGradient(0, 0, w, h);
+      grad.addColorStop(0, '#a8a8b0');
+      grad.addColorStop(0.3, '#c8c8d0');
+      grad.addColorStop(0.5, '#d8d8e0');
+      grad.addColorStop(0.7, '#b8b8c0');
+      grad.addColorStop(1, '#9898a0');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Add noise texture for metallic feel
+      for (let i = 0; i < 8000; i++) {
+        const x = Math.random() * w;
+        const y = Math.random() * h;
+        const brightness = 128 + Math.random() * 60;
+        ctx.fillStyle = `rgba(${brightness}, ${brightness}, ${brightness + 10}, 0.15)`;
+        ctx.fillRect(x, y, 1, 1);
+      }
+
+      // Add subtle horizontal brushed metal lines
+      for (let y = 0; y < h; y += 2) {
+        ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.04})`;
+        ctx.fillRect(0, y, w, 1);
+      }
+
+      // Set composite mode for scratching
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = BRUSH_RADIUS * 2;
+    }
+
+    // Scratch interaction
+    function getCanvasPos(e) {
+      const rect = scratchCanvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top,
+        pageX: clientX,
+        pageY: clientY
+      };
+    }
+
+    function scratchAt(pos) {
+      if (isRevealed) return;
+
+      ctx.beginPath();
+      if (lastScratchPos) {
+        ctx.moveTo(lastScratchPos.x, lastScratchPos.y);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+      } else {
+        ctx.arc(pos.x, pos.y, BRUSH_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      lastScratchPos = { x: pos.x, y: pos.y };
+
+      // Spawn particles
+      spawnScratchParticles(pos.pageX, pos.pageY);
+    }
+
+    function onScratchStart(e) {
+      if (isRevealed) return;
+      e.preventDefault();
+      isScratching = true;
+      lastScratchPos = null;
+
+      if (!hasStartedScratching) {
+        hasStartedScratching = true;
+        scratchHint.classList.add('hidden');
+        progressBarContainer.classList.add('visible');
+        // Start checking scratch percentage
+        scratchCheckInterval = setInterval(checkScratchPercent, 300);
+      }
+
+      const pos = getCanvasPos(e);
+      scratchAt(pos);
+    }
+
+    function onScratchMove(e) {
+      if (!isScratching || isRevealed) return;
+      e.preventDefault();
+      const pos = getCanvasPos(e);
+      scratchAt(pos);
+    }
+
+    function onScratchEnd(e) {
+      isScratching = false;
+      lastScratchPos = null;
+    }
+
+    // Mouse events
+    scratchCanvas.addEventListener('mousedown', onScratchStart);
+    scratchCanvas.addEventListener('mousemove', onScratchMove);
+    scratchCanvas.addEventListener('mouseup', onScratchEnd);
+    scratchCanvas.addEventListener('mouseleave', onScratchEnd);
+
+    // Touch events
+    scratchCanvas.addEventListener('touchstart', onScratchStart, { passive: false });
+    scratchCanvas.addEventListener('touchmove', onScratchMove, { passive: false });
+    scratchCanvas.addEventListener('touchend', onScratchEnd);
+    scratchCanvas.addEventListener('touchcancel', onScratchEnd);
+
+    // Prevent scrolling on the card when scratching
+    cardWrapper.addEventListener('touchmove', (e) => {
+      if (!isRevealed) e.preventDefault();
+    }, { passive: false });
+
+    // Check scratch percentage
+    function checkScratchPercent() {
+      if (isRevealed) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const w = scratchCanvas.width;
+      const h = scratchCanvas.height;
+
+      // Sample a grid of pixels (not all for performance)
+      const sampleSize = 40;
+      let transparent = 0;
+      let total = 0;
+
+      for (let sx = 0; sx < sampleSize; sx++) {
+        for (let sy = 0; sy < sampleSize; sy++) {
+          const px = Math.floor((sx / sampleSize) * w);
+          const py = Math.floor((sy / sampleSize) * h);
+          const pixel = ctx.getImageData(px, py, 1, 1).data;
+          if (pixel[3] < 128) transparent++;
+          total++;
+        }
+      }
+
+      const percent = transparent / total;
+      const displayPercent = Math.min(Math.round(percent * 100), 100);
+      progressPercent.textContent = displayPercent + '%';
+      progressFill.style.width = displayPercent + '%';
+
+      if (percent >= AUTO_REVEAL_THRESHOLD) {
+        autoReveal();
+      }
+    }
+
+    function autoReveal() {
+      if (isRevealed) return;
+      isRevealed = true;
+
+      if (scratchCheckInterval) {
+        clearInterval(scratchCheckInterval);
+        scratchCheckInterval = null;
+      }
+
+      // Fade out canvas
+      scratchCanvas.classList.add('hidden');
+      shimmerOverlay.classList.add('hidden');
+      progressFill.style.width = '100%';
+      progressPercent.textContent = '100%';
+
+      // Stop floating
+      cardWrapper.classList.add('revealed');
+
+      // Highlight matching cells
+      setTimeout(() => {
+        highlightMatches();
+      }, 400);
+
+      // Show result
+      setTimeout(() => {
+        showResult();
+      }, 1200);
+    }
+
+    function highlightMatches() {
+      const cells = document.querySelectorAll('.prize-cell');
+      currentGrid.forEach((cell, i) => {
+        if (cell.isMatch) {
+          cells[i].classList.add('match');
+        }
+      });
+    }
+
+    function showResult() {
+      stats.played++;
+
+      if (winResult) {
+        stats.wins++;
+        const tierRank = { legendary: 4, epic: 3, rare: 2, common: 1, none: 0 };
+        if (!stats.best || tierRank[winResult.tier] > tierRank[stats.best]) {
+          stats.best = winResult.tier;
+        }
+
+        resultEmoji.textContent = winResult.symbol;
+        resultTitle.textContent = winResult.label;
+        resultTitle.className = 'result-title tier-' + winResult.tier;
+        resultDesc.textContent = 'Congratulations! You matched 3 ' + winResult.symbol + ' and won the ' + winResult.label + '!';
+        resultPopup.className = 'result-popup tier-' + winResult.tier;
+
+        // Confetti for wins
+        if (winResult.tier !== 'none') {
+          launchConfetti();
+        }
+      } else {
+        resultEmoji.textContent = '\u{1F504}';
+        resultTitle.textContent = 'Try Again!';
+        resultTitle.className = 'result-title tier-none';
+        resultDesc.textContent = 'No matching symbols this time. Better luck on the next card!';
+        resultPopup.className = 'result-popup tier-none';
+      }
+
+      resultOverlay.classList.add('active');
+      newCardBtn.classList.add('visible');
+
+      // Display result text on card
+      if (winResult) {
+        prizeResultText.textContent = 'You won: ' + winResult.label + '!';
+      } else {
+        prizeResultText.textContent = 'No match - Try again!';
+      }
+      prizeResultText.classList.add('visible');
+
+      // Save stats
+      try { localStorage.setItem('scratchCardStats', JSON.stringify(stats)); } catch(e) {}
+      updateStatsDisplay();
+    }
+
+    function updateStatsDisplay() {
+      statPlayed.textContent = stats.played;
+      statWins.textContent = stats.wins;
+      if (stats.best) {
+        const tierEmojis = { legendary: '\u{1F48E}', epic: '\u{1F3C6}', rare: '\u{2B50}', common: '\u{1F381}' };
+        statBest.textContent = tierEmojis[stats.best] || '-';
+      } else {
+        statBest.textContent = '-';
+      }
+    }
+
+    // Scratch particles
+    function spawnScratchParticles(x, y) {
+      const count = 3 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < count; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'scratch-particle';
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 20 + Math.random() * 30;
+        const dx = Math.cos(angle) * distance;
+        const dy = Math.sin(angle) * distance;
+        particle.style.left = x + 'px';
+        particle.style.top = y + 'px';
+        particle.style.setProperty('--dx', dx + 'px');
+        particle.style.setProperty('--dy', dy + 'px');
+
+        const colors = ['#c0c0c0', '#d4d4d4', '#e8e8e8', '#b0b0b0', '#ffffff'];
+        particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+        particle.style.width = (2 + Math.random() * 4) + 'px';
+        particle.style.height = particle.style.width;
+
+        particleContainer.appendChild(particle);
+        setTimeout(() => particle.remove(), 600);
+      }
+    }
+
+    // Confetti
+    function launchConfetti() {
+      const colors = ['#ff3864', '#6c5ce7', '#00c6ff', '#ffd700', '#4ade80', '#ff6b6b', '#a855f7', '#f97316'];
+      const count = 80;
+
+      for (let i = 0; i < count; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti-piece';
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.setProperty('--drift', (Math.random() - 0.5) * 200 + 'px');
+        confetti.style.setProperty('--spin', Math.random() * 720 + 'deg');
+        confetti.style.setProperty('--fall-duration', (2 + Math.random() * 2) + 's');
+        confetti.style.animationDelay = (Math.random() * 0.8) + 's';
+        confetti.style.width = (6 + Math.random() * 8) + 'px';
+        confetti.style.height = (4 + Math.random() * 6) + 'px';
+        confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+
+        confettiContainer.appendChild(confetti);
+        setTimeout(() => confetti.remove(), 5000);
+      }
+    }
+
+    // New Card button handlers
+    newCardBtn.addEventListener('click', () => {
+      initGame();
+    });
+
+    resultBtn.addEventListener('click', () => {
+      resultOverlay.classList.remove('active');
+      setTimeout(() => initGame(), 300);
+    });
+
+    // Dismiss result overlay by clicking background
+    resultOverlay.addEventListener('click', (e) => {
+      if (e.target === resultOverlay) {
+        resultOverlay.classList.remove('active');
+      }
+    });
+
+    // Handle resize (recalculate canvas)
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        if (!isRevealed && !hasStartedScratching) {
+          setupCanvas();
+        }
+      }, 200);
+    });
+  </script>
+</body>
+</html>

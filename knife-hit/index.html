@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Knife Hit</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #0a0a1a;
+    color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #gameCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0; left: 0;
+  }
+  #backBtn {
+    position: absolute;
+    top: 12px; left: 12px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    z-index: 100;
+    text-decoration: none;
+    backdrop-filter: blur(4px);
+    transition: background 0.2s;
+  }
+  #backBtn:hover { background: rgba(255,255,255,0.2); }
+</style>
+</head>
+<body>
+<a id="backBtn" href="../index.html">&#8592; Back</a>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+const CONFIG = {
+  knivesPerLevel: 5,
+  baseRotationSpeed: 1.5,
+  speedIncreasePerLevel: 0.3,
+  appleChance: 0.3,
+  knifeThrowSpeed: 15,
+};
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let W, H, dpr;
+let logCenterX, logCenterY, logRadius;
+let knifeStartY, knifeLength, knifeWidth, handleLength;
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  logRadius = Math.min(W, H) * 0.14;
+  logCenterX = W / 2;
+  logCenterY = H * 0.3;
+  knifeLength = logRadius * 0.7;
+  knifeWidth = logRadius * 0.08;
+  handleLength = logRadius * 0.45;
+  knifeStartY = H - 120;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// --- Game State ---
+let state = 'menu'; // menu, playing, gameover, levelTransition
+let score = 0;
+let highScore = parseInt(localStorage.getItem('knifeHit_highScore')) || 0;
+let level = 1;
+let logAngle = 0;
+let rotationSpeed = CONFIG.baseRotationSpeed;
+let rotationDirection = 1;
+let knivesRemaining = CONFIG.knivesPerLevel;
+let stuckKnives = []; // { angle } - angle where knife is stuck relative to log
+let apples = []; // { angle, alive }
+let throwingKnife = null; // { y, speed } - knife being thrown
+let waitingKnife = true; // knife at bottom ready to throw
+let canThrow = true;
+
+// Effects
+let logShake = { x: 0, y: 0, intensity: 0 };
+let screenShake = { x: 0, y: 0, intensity: 0 };
+let redFlash = 0;
+let particles = [];
+let scatterKnives = []; // for game over scatter
+let levelText = { alpha: 0, scale: 0, text: '' };
+let scorePopups = []; // { x, y, text, alpha, vy }
+
+// Timing
+let lastTime = 0;
+let deltaTime = 0;
+
+// --- Helper Functions ---
+function degToRad(d) { return d * Math.PI / 180; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function randRange(a, b) { return a + Math.random() * (b - a); }
+
+function getRotationSpeed() {
+  return CONFIG.baseRotationSpeed + (level - 1) * CONFIG.speedIncreasePerLevel;
+}
+
+function resetLevel() {
+  knivesRemaining = CONFIG.knivesPerLevel;
+  stuckKnives = [];
+  apples = [];
+  throwingKnife = null;
+  waitingKnife = true;
+  canThrow = true;
+  rotationSpeed = getRotationSpeed();
+  // Randomly change direction
+  if (level > 1) rotationDirection = Math.random() > 0.5 ? 1 : -1;
+  // Maybe place apple
+  if (Math.random() < CONFIG.appleChance) {
+    let appleAngle = Math.random() * 360;
+    apples.push({ angle: appleAngle, alive: true });
+  }
+}
+
+function startGame() {
+  score = 0;
+  level = 1;
+  logAngle = 0;
+  rotationDirection = 1;
+  particles = [];
+  scatterKnives = [];
+  scorePopups = [];
+  logShake = { x: 0, y: 0, intensity: 0 };
+  screenShake = { x: 0, y: 0, intensity: 0 };
+  redFlash = 0;
+  levelText = { alpha: 0, scale: 0, text: '' };
+  resetLevel();
+  state = 'playing';
+}
+
+function triggerGameOver() {
+  state = 'gameover';
+  screenShake.intensity = 20;
+  redFlash = 1.0;
+  if (score > highScore) {
+    highScore = score;
+    localStorage.setItem('knifeHit_highScore', highScore);
+  }
+  // Scatter stuck knives
+  scatterKnives = [];
+  for (let k of stuckKnives) {
+    let rad = degToRad(k.angle + logAngle);
+    let tipX = logCenterX + Math.cos(rad) * logRadius;
+    let tipY = logCenterY + Math.sin(rad) * logRadius;
+    scatterKnives.push({
+      x: tipX, y: tipY,
+      vx: Math.cos(rad) * randRange(3, 8),
+      vy: Math.sin(rad) * randRange(3, 8) - 2,
+      angle: k.angle + logAngle,
+      alpha: 1,
+      rotation: randRange(-5, 5)
+    });
+  }
+  stuckKnives = [];
+}
+
+function advanceLevel() {
+  level++;
+  state = 'levelTransition';
+  levelText = { alpha: 1, scale: 0.1, text: 'Level ' + level };
+  setTimeout(() => {
+    resetLevel();
+    state = 'playing';
+  }, 1200);
+}
+
+function checkCollision(newAngle) {
+  for (let k of stuckKnives) {
+    let diff = Math.abs(((newAngle - k.angle) % 360 + 540) % 360 - 180);
+    if (diff < 10) return true;
+  }
+  return false;
+}
+
+function checkAppleHit(newAngle) {
+  for (let a of apples) {
+    if (!a.alive) continue;
+    let diff = Math.abs(((newAngle - a.angle) % 360 + 540) % 360 - 180);
+    if (diff < 15) {
+      a.alive = false;
+      return true;
+    }
+  }
+  return false;
+}
+
+function spawnAppleParticles(angle) {
+  let rad = degToRad(angle + logAngle);
+  let cx = logCenterX + Math.cos(rad) * (logRadius + 10);
+  let cy = logCenterY + Math.sin(rad) * (logRadius + 10);
+  for (let i = 0; i < 12; i++) {
+    let a = Math.random() * Math.PI * 2;
+    let spd = randRange(2, 6);
+    particles.push({
+      x: cx, y: cy,
+      vx: Math.cos(a) * spd,
+      vy: Math.sin(a) * spd,
+      life: 1,
+      decay: randRange(0.02, 0.04),
+      size: randRange(3, 7),
+      color: Math.random() > 0.3 ? '#e74c3c' : '#2ecc71'
+    });
+  }
+}
+
+function spawnStickParticles() {
+  for (let i = 0; i < 6; i++) {
+    let a = Math.random() * Math.PI * 2;
+    let spd = randRange(1, 3);
+    particles.push({
+      x: logCenterX, y: logCenterY - logRadius,
+      vx: Math.cos(a) * spd,
+      vy: Math.sin(a) * spd - 1,
+      life: 1,
+      decay: randRange(0.03, 0.06),
+      size: randRange(2, 4),
+      color: '#8B6914'
+    });
+  }
+}
+
+// --- Input ---
+function handleTap() {
+  if (state === 'menu') {
+    startGame();
+    return;
+  }
+  if (state === 'gameover') {
+    startGame();
+    return;
+  }
+  if (state === 'playing' && waitingKnife && canThrow) {
+    // Throw knife
+    throwingKnife = { y: knifeStartY, speed: CONFIG.knifeThrowSpeed };
+    waitingKnife = false;
+    canThrow = false;
+  }
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  handleTap();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || e.code === 'ArrowUp') {
+    e.preventDefault();
+    handleTap();
+  }
+});
+
+// --- Drawing Functions ---
+function drawLog(cx, cy, r) {
+  ctx.save();
+  ctx.translate(cx + logShake.x, cy + logShake.y);
+  ctx.rotate(degToRad(logAngle));
+
+  // Main circle
+  let grad = ctx.createRadialGradient(0, 0, r * 0.1, 0, 0, r);
+  grad.addColorStop(0, '#D4A056');
+  grad.addColorStop(0.5, '#B8860B');
+  grad.addColorStop(1, '#8B6914');
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Wood grain rings
+  ctx.strokeStyle = 'rgba(139, 90, 20, 0.35)';
+  ctx.lineWidth = 1.2;
+  for (let i = 1; i <= 5; i++) {
+    ctx.beginPath();
+    ctx.arc(r * 0.05, -r * 0.03, r * (i / 6), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Center dot
+  ctx.beginPath();
+  ctx.arc(r * 0.05, -r * 0.03, r * 0.06, 0, Math.PI * 2);
+  ctx.fillStyle = '#6B4400';
+  ctx.fill();
+
+  // Outer ring shadow
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawKnifeBlade(x, y, length, width, rotation) {
+  ctx.save();
+  ctx.translate(x, y);
+  if (rotation !== undefined) ctx.rotate(degToRad(rotation));
+
+  // Blade
+  let bladeGrad = ctx.createLinearGradient(-width / 2, 0, width / 2, 0);
+  bladeGrad.addColorStop(0, '#8a8a8a');
+  bladeGrad.addColorStop(0.3, '#e8e8e8');
+  bladeGrad.addColorStop(0.5, '#ffffff');
+  bladeGrad.addColorStop(0.7, '#e8e8e8');
+  bladeGrad.addColorStop(1, '#8a8a8a');
+
+  ctx.beginPath();
+  ctx.moveTo(0, -length);
+  ctx.lineTo(-width / 2, -length * 0.15);
+  ctx.lineTo(-width / 2, 0);
+  ctx.lineTo(width / 2, 0);
+  ctx.lineTo(width / 2, -length * 0.15);
+  ctx.closePath();
+  ctx.fillStyle = bladeGrad;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+
+  // Blade tip highlight
+  ctx.beginPath();
+  ctx.moveTo(0, -length);
+  ctx.lineTo(-width * 0.15, -length * 0.5);
+  ctx.lineTo(0, -length * 0.15);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.fill();
+
+  // Guard
+  let guardW = width * 1.8;
+  let guardH = width * 0.5;
+  ctx.fillStyle = '#444';
+  ctx.fillRect(-guardW / 2, 0, guardW, guardH);
+
+  // Handle
+  let hLen = handleLength;
+  let handleGrad = ctx.createLinearGradient(-width * 0.6, 0, width * 0.6, 0);
+  handleGrad.addColorStop(0, '#2a2a2a');
+  handleGrad.addColorStop(0.5, '#444');
+  handleGrad.addColorStop(1, '#2a2a2a');
+
+  ctx.beginPath();
+  ctx.roundRect(-width * 0.6, guardH, width * 1.2, hLen, 3);
+  ctx.fillStyle = handleGrad;
+  ctx.fill();
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+
+  // Handle rivets
+  ctx.fillStyle = '#666';
+  let rivetY1 = guardH + hLen * 0.25;
+  let rivetY2 = guardH + hLen * 0.75;
+  ctx.beginPath();
+  ctx.arc(0, rivetY1, width * 0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0, rivetY2, width * 0.15, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawStuckKnife(knifeAngle) {
+  ctx.save();
+  let totalAngle = knifeAngle + logAngle;
+  let rad = degToRad(totalAngle);
+
+  // Knife sticks outward from log edge
+  let stickDepth = knifeLength * 0.35;
+  let kx = logCenterX + logShake.x + Math.cos(rad) * (logRadius - stickDepth);
+  let ky = logCenterY + logShake.y + Math.sin(rad) * (logRadius - stickDepth);
+
+  ctx.translate(kx, ky);
+  ctx.rotate(rad + Math.PI / 2);
+
+  // Blade embedded in log
+  let bLen = knifeLength;
+  let bW = knifeWidth;
+
+  let bladeGrad = ctx.createLinearGradient(-bW / 2, 0, bW / 2, 0);
+  bladeGrad.addColorStop(0, '#8a8a8a');
+  bladeGrad.addColorStop(0.3, '#e8e8e8');
+  bladeGrad.addColorStop(0.5, '#ffffff');
+  bladeGrad.addColorStop(0.7, '#e8e8e8');
+  bladeGrad.addColorStop(1, '#8a8a8a');
+
+  ctx.beginPath();
+  ctx.moveTo(0, -bLen);
+  ctx.lineTo(-bW / 2, -bLen * 0.15);
+  ctx.lineTo(-bW / 2, 0);
+  ctx.lineTo(bW / 2, 0);
+  ctx.lineTo(bW / 2, -bLen * 0.15);
+  ctx.closePath();
+  ctx.fillStyle = bladeGrad;
+  ctx.fill();
+
+  // Guard
+  let guardW = bW * 1.8;
+  let guardH = bW * 0.5;
+  ctx.fillStyle = '#444';
+  ctx.fillRect(-guardW / 2, 0, guardW, guardH);
+
+  // Handle
+  let hLen = handleLength;
+  let handleGrad = ctx.createLinearGradient(-bW * 0.6, 0, bW * 0.6, 0);
+  handleGrad.addColorStop(0, '#2a2a2a');
+  handleGrad.addColorStop(0.5, '#444');
+  handleGrad.addColorStop(1, '#2a2a2a');
+  ctx.beginPath();
+  ctx.roundRect(-bW * 0.6, guardH, bW * 1.2, hLen, 3);
+  ctx.fillStyle = handleGrad;
+  ctx.fill();
+
+  ctx.fillStyle = '#666';
+  ctx.beginPath();
+  ctx.arc(0, guardH + hLen * 0.25, bW * 0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0, guardH + hLen * 0.75, bW * 0.15, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawApple(appleAngle) {
+  ctx.save();
+  let totalAngle = appleAngle + logAngle;
+  let rad = degToRad(totalAngle);
+  let dist = logRadius + 14;
+  let ax = logCenterX + logShake.x + Math.cos(rad) * dist;
+  let ay = logCenterY + logShake.y + Math.sin(rad) * dist;
+  let appleR = logRadius * 0.15;
+
+  ctx.translate(ax, ay);
+
+  // Apple body
+  let appleGrad = ctx.createRadialGradient(-appleR * 0.3, -appleR * 0.3, appleR * 0.1, 0, 0, appleR);
+  appleGrad.addColorStop(0, '#ff4444');
+  appleGrad.addColorStop(0.7, '#cc2222');
+  appleGrad.addColorStop(1, '#991111');
+  ctx.beginPath();
+  ctx.arc(0, 0, appleR, 0, Math.PI * 2);
+  ctx.fillStyle = appleGrad;
+  ctx.fill();
+
+  // Highlight
+  ctx.beginPath();
+  ctx.arc(-appleR * 0.25, -appleR * 0.25, appleR * 0.3, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.fill();
+
+  // Stem
+  ctx.strokeStyle = '#5a3a1a';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, -appleR);
+  ctx.quadraticCurveTo(2, -appleR - 5, 1, -appleR - 8);
+  ctx.stroke();
+
+  // Leaf
+  ctx.fillStyle = '#27ae60';
+  ctx.beginPath();
+  ctx.ellipse(4, -appleR - 4, 6, 3, degToRad(30), 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawWaitingKnife() {
+  if (!waitingKnife) return;
+  drawKnifeBlade(W / 2, knifeStartY, knifeLength, knifeWidth);
+}
+
+function drawThrowingKnife() {
+  if (!throwingKnife) return;
+
+  // Motion blur effect
+  ctx.save();
+  ctx.globalAlpha = 0.15;
+  drawKnifeBlade(W / 2, throwingKnife.y + 20, knifeLength, knifeWidth);
+  ctx.globalAlpha = 0.08;
+  drawKnifeBlade(W / 2, throwingKnife.y + 40, knifeLength, knifeWidth);
+  ctx.restore();
+
+  drawKnifeBlade(W / 2, throwingKnife.y, knifeLength, knifeWidth);
+}
+
+function drawKnifeIcons() {
+  let iconW = 4;
+  let iconH = 20;
+  let spacing = 14;
+  let totalW = knivesRemaining * spacing;
+  let startX = W / 2 - totalW / 2 + spacing / 2;
+  let y = H - 50;
+
+  for (let i = 0; i < knivesRemaining; i++) {
+    let ix = startX + i * spacing;
+    ctx.save();
+    ctx.translate(ix, y);
+
+    // Mini blade
+    ctx.fillStyle = '#ccc';
+    ctx.beginPath();
+    ctx.moveTo(0, -iconH / 2);
+    ctx.lineTo(-iconW / 2, -iconH * 0.1);
+    ctx.lineTo(-iconW / 2, 0);
+    ctx.lineTo(iconW / 2, 0);
+    ctx.lineTo(iconW / 2, -iconH * 0.1);
+    ctx.closePath();
+    ctx.fill();
+
+    // Mini handle
+    ctx.fillStyle = '#555';
+    ctx.fillRect(-iconW * 0.5, 1, iconW, iconH * 0.45);
+
+    ctx.restore();
+  }
+}
+
+function drawScore() {
+  // Score
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 48px "Segoe UI", sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 10;
+  ctx.fillText(score, W / 2, 70);
+  ctx.shadowBlur = 0;
+
+  // Level indicator
+  ctx.font = '16px "Segoe UI", sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillText('Level ' + level, W / 2, 95);
+
+  // High score
+  ctx.font = '13px "Segoe UI", sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.textAlign = 'right';
+  ctx.fillText('Best: ' + highScore, W - 16, 30);
+
+  ctx.restore();
+}
+
+function drawParticles() {
+  for (let p of particles) {
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawScatterKnives() {
+  for (let k of scatterKnives) {
+    ctx.save();
+    ctx.globalAlpha = k.alpha;
+    ctx.translate(k.x, k.y);
+    ctx.rotate(degToRad(k.angle + k.rotation));
+
+    let bW = knifeWidth;
+    let bLen = knifeLength;
+
+    ctx.fillStyle = '#bbb';
+    ctx.beginPath();
+    ctx.moveTo(0, -bLen);
+    ctx.lineTo(-bW / 2, -bLen * 0.15);
+    ctx.lineTo(-bW / 2, 0);
+    ctx.lineTo(bW / 2, 0);
+    ctx.lineTo(bW / 2, -bLen * 0.15);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#333';
+    ctx.fillRect(-bW * 0.6, 2, bW * 1.2, handleLength);
+
+    ctx.restore();
+  }
+}
+
+function drawScorePopups() {
+  for (let p of scorePopups) {
+    ctx.save();
+    ctx.globalAlpha = p.alpha;
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 24px "Segoe UI", sans-serif';
+    ctx.fillStyle = p.color || '#ffd700';
+    ctx.fillText(p.text, p.x, p.y);
+    ctx.restore();
+  }
+}
+
+function drawMenu() {
+  ctx.save();
+  ctx.textAlign = 'center';
+
+  // Title
+  let titleGrad = ctx.createLinearGradient(W / 2 - 120, 0, W / 2 + 120, 0);
+  titleGrad.addColorStop(0, '#ff6b6b');
+  titleGrad.addColorStop(0.5, '#ffd93d');
+  titleGrad.addColorStop(1, '#ff6b6b');
+
+  ctx.font = 'bold 52px "Segoe UI", sans-serif';
+  ctx.fillStyle = titleGrad;
+  ctx.shadowColor = 'rgba(255, 107, 107, 0.4)';
+  ctx.shadowBlur = 20;
+  ctx.fillText('KNIFE HIT', W / 2, H * 0.32);
+  ctx.shadowBlur = 0;
+
+  // Decorative knife
+  drawKnifeBlade(W / 2, H * 0.48, knifeLength * 1.5, knifeWidth * 1.3);
+
+  // High score
+  if (highScore > 0) {
+    ctx.font = '18px "Segoe UI", sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText('Best Score: ' + highScore, W / 2, H * 0.62);
+  }
+
+  // Tap to start
+  let pulse = 0.5 + 0.5 * Math.sin(Date.now() / 400);
+  ctx.globalAlpha = 0.5 + pulse * 0.5;
+  ctx.font = '20px "Segoe UI", sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.fillText('Tap to Start', W / 2, H * 0.75);
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
+
+function drawGameOver() {
+  ctx.save();
+
+  // Dark overlay
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = 'center';
+
+  // Game over text
+  ctx.font = 'bold 44px "Segoe UI", sans-serif';
+  ctx.fillStyle = '#e74c3c';
+  ctx.shadowColor = 'rgba(231, 76, 60, 0.5)';
+  ctx.shadowBlur = 15;
+  ctx.fillText('GAME OVER', W / 2, H * 0.33);
+  ctx.shadowBlur = 0;
+
+  // Score
+  ctx.font = 'bold 64px "Segoe UI", sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(score, W / 2, H * 0.45);
+
+  ctx.font = '16px "Segoe UI", sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillText('Level ' + level, W / 2, H * 0.50);
+
+  // High score
+  if (score >= highScore && score > 0) {
+    ctx.font = 'bold 20px "Segoe UI", sans-serif';
+    ctx.fillStyle = '#ffd700';
+    ctx.fillText('NEW HIGH SCORE!', W / 2, H * 0.57);
+  } else {
+    ctx.font = '18px "Segoe UI", sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText('Best: ' + highScore, W / 2, H * 0.57);
+  }
+
+  // Tap to restart
+  let pulse = 0.5 + 0.5 * Math.sin(Date.now() / 400);
+  ctx.globalAlpha = 0.5 + pulse * 0.5;
+  ctx.font = '20px "Segoe UI", sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.fillText('Tap to Restart', W / 2, H * 0.72);
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
+
+function drawLevelTransition() {
+  if (levelText.alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = levelText.alpha;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `bold ${48 * levelText.scale}px "Segoe UI", sans-serif`;
+  let tGrad = ctx.createLinearGradient(W / 2 - 80, H / 2, W / 2 + 80, H / 2);
+  tGrad.addColorStop(0, '#ffd700');
+  tGrad.addColorStop(1, '#ff8c00');
+  ctx.fillStyle = tGrad;
+  ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
+  ctx.shadowBlur = 20;
+  ctx.fillText(levelText.text, W / 2, H / 2);
+  ctx.restore();
+}
+
+// --- Update ---
+function update(dt) {
+  // Log rotation
+  if (state === 'playing' || state === 'levelTransition') {
+    logAngle += rotationSpeed * rotationDirection * dt * 60;
+    logAngle %= 360;
+  }
+
+  // Log shake decay
+  if (logShake.intensity > 0) {
+    logShake.intensity *= 0.85;
+    logShake.x = (Math.random() - 0.5) * logShake.intensity;
+    logShake.y = (Math.random() - 0.5) * logShake.intensity;
+    if (logShake.intensity < 0.3) {
+      logShake.intensity = 0;
+      logShake.x = 0;
+      logShake.y = 0;
+    }
+  }
+
+  // Screen shake decay
+  if (screenShake.intensity > 0) {
+    screenShake.intensity *= 0.88;
+    screenShake.x = (Math.random() - 0.5) * screenShake.intensity;
+    screenShake.y = (Math.random() - 0.5) * screenShake.intensity;
+    if (screenShake.intensity < 0.5) {
+      screenShake.intensity = 0;
+      screenShake.x = 0;
+      screenShake.y = 0;
+    }
+  }
+
+  // Red flash decay
+  if (redFlash > 0) {
+    redFlash *= 0.92;
+    if (redFlash < 0.01) redFlash = 0;
+  }
+
+  // Level text animation
+  if (levelText.alpha > 0) {
+    levelText.scale = Math.min(levelText.scale + dt * 4, 1.0);
+    if (levelText.scale >= 1.0) {
+      levelText.alpha -= dt * 1.5;
+      if (levelText.alpha < 0) levelText.alpha = 0;
+    }
+  }
+
+  // Throwing knife
+  if (throwingKnife) {
+    throwingKnife.y -= throwingKnife.speed * dt * 60;
+
+    // Check if knife reached log
+    let knifeTopY = throwingKnife.y - knifeLength;
+    let logBottomEdge = logCenterY + logShake.y + logRadius;
+
+    if (knifeTopY <= logBottomEdge) {
+      // Calculate where on the log this knife sticks
+      // The knife comes from directly below (angle = 270 degrees in our coordinate system)
+      let stickAngle = (270 - logAngle) % 360;
+      if (stickAngle < 0) stickAngle += 360;
+
+      // Check collision with existing knives
+      if (checkCollision(stickAngle)) {
+        throwingKnife = null;
+        triggerGameOver();
+        return;
+      }
+
+      // Check apple hit
+      if (checkAppleHit(stickAngle)) {
+        score += 3;
+        spawnAppleParticles(stickAngle);
+        scorePopups.push({
+          x: W / 2, y: logCenterY - logRadius - 30,
+          text: '+3', alpha: 1, vy: -1.5,
+          color: '#e74c3c'
+        });
+      }
+
+      // Stick the knife
+      stuckKnives.push({ angle: stickAngle });
+      throwingKnife = null;
+      score += 1;
+      knivesRemaining--;
+      logShake.intensity = 6;
+      spawnStickParticles();
+
+      scorePopups.push({
+        x: W / 2, y: logCenterY - logRadius - 10,
+        text: '+1', alpha: 1, vy: -1.2,
+        color: '#ffd700'
+      });
+
+      if (knivesRemaining <= 0) {
+        // Advance to next level
+        setTimeout(() => advanceLevel(), 400);
+      } else {
+        // Ready next knife
+        setTimeout(() => {
+          waitingKnife = true;
+          canThrow = true;
+        }, 200);
+      }
+    }
+  }
+
+  // Particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    let p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.1;
+    p.life -= p.decay;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  // Scatter knives (game over)
+  for (let i = scatterKnives.length - 1; i >= 0; i--) {
+    let k = scatterKnives[i];
+    k.x += k.vx;
+    k.y += k.vy;
+    k.vy += 0.15;
+    k.angle += k.rotation;
+    k.alpha -= 0.008;
+    if (k.alpha <= 0) scatterKnives.splice(i, 1);
+  }
+
+  // Score popups
+  for (let i = scorePopups.length - 1; i >= 0; i--) {
+    let p = scorePopups[i];
+    p.y += p.vy;
+    p.alpha -= 0.015;
+    if (p.alpha <= 0) scorePopups.splice(i, 1);
+  }
+}
+
+// --- Main Loop ---
+function gameLoop(timestamp) {
+  if (!lastTime) lastTime = timestamp;
+  deltaTime = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+
+  update(deltaTime);
+
+  // Clear
+  ctx.save();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // Background
+  let bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+  bgGrad.addColorStop(0, '#0a0a1a');
+  bgGrad.addColorStop(1, '#151530');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Apply screen shake
+  ctx.translate(screenShake.x, screenShake.y);
+
+  if (state === 'menu') {
+    // Draw a decorative log in background
+    drawLog(logCenterX, logCenterY, logRadius);
+    drawMenu();
+  } else {
+    // Draw game elements
+    drawLog(logCenterX, logCenterY, logRadius);
+
+    // Draw apples
+    for (let a of apples) {
+      if (a.alive) drawApple(a.angle);
+    }
+
+    // Draw stuck knives
+    for (let k of stuckKnives) {
+      drawStuckKnife(k.angle);
+    }
+
+    // Draw scatter knives (game over)
+    drawScatterKnives();
+
+    // Throwing knife
+    drawThrowingKnife();
+
+    // Waiting knife
+    drawWaitingKnife();
+
+    // Knife icons
+    drawKnifeIcons();
+
+    // Score
+    drawScore();
+
+    // Particles
+    drawParticles();
+
+    // Score popups
+    drawScorePopups();
+
+    // Level transition
+    drawLevelTransition();
+
+    // Red flash overlay
+    if (redFlash > 0) {
+      ctx.fillStyle = `rgba(231, 76, 60, ${redFlash * 0.3})`;
+      ctx.fillRect(-50, -50, W + 100, H + 100);
+    }
+
+    // Game over overlay
+    if (state === 'gameover') {
+      drawGameOver();
+    }
+  }
+
+  ctx.restore();
+
+  requestAnimationFrame(gameLoop);
+}
+
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>

@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎄 Christmas Lucky Wheel</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 16px 40px;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background-color: #0a0a1a;
+      background-image:
+        radial-gradient(ellipse at 20% 30%, rgba(30,58,138,0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 70%, rgba(220,38,38,0.08) 0%, transparent 55%),
+        radial-gradient(ellipse at 50% 90%, rgba(20,83,45,0.12) 0%, transparent 50%);
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    .snowflake {
+      position: fixed;
+      top: -2em;
+      color: rgba(180, 220, 255, 0.75);
+      font-size: 1.2em;
+      user-select: none;
+      pointer-events: none;
+      z-index: 0;
+      animation: snowfall linear infinite;
+    }
+
+    @keyframes snowfall {
+      0%   { transform: translateY(0)    rotate(0deg);   opacity: 0.8; }
+      10%  { opacity: 1; }
+      90%  { opacity: 0.6; }
+      100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+    }
+
+    .back-btn {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 50;
+      color: rgba(180, 220, 255, 0.85);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 6px 14px;
+      border-radius: 20px;
+      backdrop-filter: blur(6px);
+      transition: background 0.2s, color 0.2s;
+    }
+    .back-btn:hover {
+      background: rgba(255,255,255,0.13);
+      color: #fff;
+    }
+
+    .title {
+      font-size: clamp(1.6rem, 6vw, 2.4rem);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      text-align: center;
+      background: linear-gradient(90deg, #dc2626 0%, #16a34a 50%, #ca8a04 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 6px;
+      position: relative;
+      z-index: 1;
+      filter: drop-shadow(0 2px 8px rgba(220,38,38,0.35));
+    }
+
+    .subtitle {
+      font-size: clamp(0.78rem, 3vw, 0.95rem);
+      color: rgba(180, 220, 255, 0.7);
+      text-align: center;
+      margin-bottom: 28px;
+      letter-spacing: 0.04em;
+      position: relative;
+      z-index: 1;
+    }
+
+    .wheel-wrapper {
+      position: relative;
+      width: min(92vw, 400px);
+      height: min(92vw, 400px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+    }
+
+    .wheel-glow {
+      position: absolute;
+      inset: -18px;
+      border-radius: 50%;
+      background: conic-gradient(
+        #dc2626 0deg,
+        #16a34a 60deg,
+        #ca8a04 120deg,
+        #1e3a5f 180deg,
+        #dc2626 240deg,
+        #14532d 300deg,
+        #dc2626 360deg
+      );
+      filter: blur(22px);
+      opacity: 0.55;
+      z-index: 0;
+      animation: glowPulse 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes glowPulse {
+      from { opacity: 0.45; filter: blur(20px); }
+      to   { opacity: 0.70; filter: blur(28px); }
+    }
+
+    canvas#wheel {
+      position: relative;
+      z-index: 2;
+      border-radius: 50%;
+      display: block;
+    }
+
+    .pointer {
+      position: absolute;
+      top: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      width: 0;
+      height: 0;
+      border-left: 13px solid transparent;
+      border-right: 13px solid transparent;
+      border-top: 30px solid #ca8a04;
+      filter: drop-shadow(0 2px 6px rgba(202,138,4,0.8));
+    }
+
+    .center-btn {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 15;
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      border: 3px solid rgba(202,138,4,0.7);
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+      color: #fff;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      box-shadow:
+        0 0 0 4px rgba(10,10,26,0.9),
+        0 4px 20px rgba(220,38,38,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .center-btn:hover:not(:disabled) {
+      transform: translate(-50%, -50%) scale(1.08);
+      box-shadow:
+        0 0 0 4px rgba(10,10,26,0.9),
+        0 6px 28px rgba(220,38,38,0.8),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+    .center-btn:active:not(:disabled) {
+      transform: translate(-50%, -50%) scale(0.96);
+    }
+    .center-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(5, 5, 18, 0.82);
+      backdrop-filter: blur(8px);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .overlay.active {
+      display: flex;
+      animation: overlayIn 0.35s ease;
+    }
+    @keyframes overlayIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .result-card {
+      background: linear-gradient(160deg, #0f172a 0%, #1e0a0a 50%, #0a1a0f 100%);
+      border: 1px solid rgba(202,138,4,0.35);
+      border-radius: 24px;
+      padding: 40px 32px 32px;
+      max-width: 340px;
+      width: 100%;
+      text-align: center;
+      box-shadow:
+        0 0 60px rgba(220,38,38,0.25),
+        0 0 120px rgba(20,83,45,0.15),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+      animation: cardPop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes cardPop {
+      from { transform: scale(0.7) translateY(30px); opacity: 0; }
+      to   { transform: scale(1)   translateY(0);    opacity: 1; }
+    }
+
+    .result-emoji {
+      font-size: 4.5rem;
+      line-height: 1;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 4px 16px rgba(202,138,4,0.5));
+      animation: emojiBounce 0.6s 0.2s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes emojiBounce {
+      from { transform: scale(0.3) rotate(-15deg); opacity: 0; }
+      to   { transform: scale(1)   rotate(0deg);   opacity: 1; }
+    }
+
+    .result-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(180,220,255,0.6);
+      margin-bottom: 8px;
+    }
+
+    .result-prize {
+      font-size: clamp(1.3rem, 6vw, 1.75rem);
+      font-weight: 800;
+      background: linear-gradient(90deg, #dc2626, #ca8a04, #16a34a);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 28px;
+      line-height: 1.25;
+    }
+
+    .btn-again {
+      display: inline-block;
+      padding: 13px 32px;
+      border-radius: 50px;
+      border: none;
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(220,38,38,0.5);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-again:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(220,38,38,0.65);
+    }
+    .btn-again:active {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <span class="snowflake" style="left:8%;animation-duration:12s;animation-delay:0s">❄</span>
+  <span class="snowflake" style="left:18%;animation-duration:15s;animation-delay:2s">❄</span>
+  <span class="snowflake" style="left:31%;animation-duration:10s;animation-delay:5s">❄</span>
+  <span class="snowflake" style="left:45%;animation-duration:18s;animation-delay:1s">❄</span>
+  <span class="snowflake" style="left:57%;animation-duration:13s;animation-delay:7s">❄</span>
+  <span class="snowflake" style="left:68%;animation-duration:11s;animation-delay:3s">❄</span>
+  <span class="snowflake" style="left:79%;animation-duration:16s;animation-delay:9s">❄</span>
+  <span class="snowflake" style="left:91%;animation-duration:14s;animation-delay:4s">❄</span>
+
+  <a href="../index.html" class="back-btn">← Back</a>
+
+  <h1 class="title">🎄 Christmas Lucky Wheel</h1>
+  <p class="subtitle">Spin to win Christmas prizes!</p>
+
+  <div class="wheel-wrapper" id="wrapper">
+    <div class="wheel-glow"></div>
+    <canvas id="wheel"></canvas>
+    <div class="pointer"></div>
+    <button class="center-btn" id="spinBtn">SPIN</button>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="result-card">
+      <div class="result-emoji" id="resultEmoji"></div>
+      <div class="result-label">You won</div>
+      <div class="result-prize" id="resultPrize"></div>
+      <button class="btn-again" id="againBtn">🎄 Spin Again</button>
+    </div>
+  </div>
+
+  <canvas id="confetti" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:120"></canvas>
+
+  <script>
+    const SEGMENTS = [
+      { label: "Christmas Jackpot!", emoji: "🎄", color: "#7f1d1d", weight: 1  },
+      { label: "Voucher 200k",       emoji: "🎁", color: "#dc2626", weight: 3  },
+      { label: "Mystery Gift",       emoji: "🦌", color: "#14532d", weight: 5  },
+      { label: "500 Points",         emoji: "⭐", color: "#16a34a", weight: 8  },
+      { label: "Try Again",          emoji: "❄️", color: "#1e3a5f", weight: 10 },
+      { label: "200 Points",         emoji: "🔔", color: "#ca8a04", weight: 12 },
+      { label: "100 Points",         emoji: "⛄", color: "#1e293b", weight: 15 },
+      { label: "Try Again",          emoji: "🎅", color: "#166534", weight: 15 },
+    ];
+
+    const wrapper     = document.getElementById("wrapper");
+    const canvas      = document.getElementById("wheel");
+    const ctx         = canvas.getContext("2d");
+    const spinBtn     = document.getElementById("spinBtn");
+    const overlay     = document.getElementById("overlay");
+    const resultEmoji = document.getElementById("resultEmoji");
+    const resultPrize = document.getElementById("resultPrize");
+    const againBtn    = document.getElementById("againBtn");
+
+    function drawWheel(rotation) {
+      const dpr = window.devicePixelRatio || 1;
+      const logicalSize = Math.min(wrapper.offsetWidth, 400);
+      if (canvas.width !== logicalSize * dpr) {
+        canvas.width  = logicalSize * dpr;
+        canvas.height = logicalSize * dpr;
+        canvas.style.width  = logicalSize + "px";
+        canvas.style.height = logicalSize + "px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      const size = logicalSize;
+      const cx = size / 2, cy = size / 2, R = size / 2 - 4;
+      ctx.clearRect(0, 0, size, size);
+      const total = SEGMENTS.reduce((s, x) => s + x.weight, 0);
+      let angle = rotation;
+      for (const seg of SEGMENTS) {
+        const arc = (seg.weight / total) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, R, angle, angle + arc);
+        ctx.closePath();
+        ctx.fillStyle = seg.color;
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.2)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, R, angle, angle + arc);
+        ctx.closePath();
+        const gradH = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+        gradH.addColorStop(0, "rgba(255,255,255,0.08)");
+        gradH.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = gradH;
+        ctx.fill();
+        ctx.restore();
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle + arc / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold " + (size < 300 ? 10 : 12) + "px sans-serif";
+        ctx.shadowColor = "rgba(0,0,0,0.7)";
+        ctx.shadowBlur = 4;
+        ctx.fillText(seg.emoji + " " + seg.label, R - 10, 5);
+        ctx.restore();
+        angle += arc;
+      }
+      ctx.beginPath();
+      ctx.arc(cx, cy, 36, 0, Math.PI * 2);
+      ctx.fillStyle = "#0a0a1a";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(202,138,4,0.6)";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    let currentRotation = 0;
+    let isSpinning = false;
+
+    function spin() {
+      if (isSpinning) return;
+      isSpinning = true;
+      spinBtn.disabled = true;
+      const total = SEGMENTS.reduce((s, x) => s + x.weight, 0);
+      let r = Math.random() * total;
+      let chosenIdx = SEGMENTS.length - 1;
+      for (let i = 0; i < SEGMENTS.length; i++) {
+        r -= SEGMENTS[i].weight;
+        if (r <= 0) { chosenIdx = i; break; }
+      }
+      let segStart = 0;
+      for (let i = 0; i < chosenIdx; i++) {
+        segStart += (SEGMENTS[i].weight / total) * Math.PI * 2;
+      }
+      const segArc       = (SEGMENTS[chosenIdx].weight / total) * Math.PI * 2;
+      const segCenter    = segStart + segArc / 2;
+      const targetAngle  = -Math.PI / 2 - segCenter;
+      const normalized   = ((targetAngle - currentRotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+      const targetRotation = currentRotation + (5 + Math.floor(Math.random() * 4)) * Math.PI * 2 + normalized;
+      const startRot  = currentRotation;
+      const startTime = performance.now();
+      const duration  = 4500 + Math.random() * 2000;
+      function animate(now) {
+        const t    = Math.min((now - startTime) / duration, 1);
+        const ease = 1 - Math.pow(1 - t, 4);
+        currentRotation = startRot + (targetRotation - startRot) * ease;
+        drawWheel(currentRotation);
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          currentRotation  = targetRotation;
+          isSpinning       = false;
+          spinBtn.disabled = false;
+          setTimeout(() => showResult(SEGMENTS[chosenIdx]), 300);
+        }
+      }
+      requestAnimationFrame(animate);
+    }
+
+    function showResult(seg) {
+      resultEmoji.textContent = seg.emoji;
+      resultPrize.textContent = seg.label;
+      overlay.classList.add("active");
+      if (seg.label === "Christmas Jackpot!") launchConfetti();
+    }
+
+    function hideResult() {
+      overlay.classList.remove("active");
+      stopConfetti();
+    }
+
+    spinBtn.addEventListener("click", spin);
+    againBtn.addEventListener("click", hideResult);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) hideResult(); });
+
+    const confettiCanvas = document.getElementById("confetti");
+    const cctx = confettiCanvas.getContext("2d");
+    const CONFETTI_COLORS = ["#dc2626","#16a34a","#ca8a04","#fff","#ef4444","#22c55e"];
+    let confettiParticles = [];
+    let confettiRAF = null;
+
+    function resizeConfetti() {
+      confettiCanvas.width  = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+    }
+    resizeConfetti();
+    window.addEventListener("resize", resizeConfetti);
+
+    function makeParticle() {
+      return {
+        x: Math.random() * confettiCanvas.width,
+        y: Math.random() * confettiCanvas.height * 0.4 - confettiCanvas.height * 0.2,
+        w: 7 + Math.random() * 8,
+        h: 5 + Math.random() * 5,
+        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+        angle: Math.random() * Math.PI * 2,
+        spin: (Math.random() - 0.5) * 0.18,
+        vx: (Math.random() - 0.5) * 3,
+        vy: 2 + Math.random() * 3.5,
+        alpha: 1,
+      };
+    }
+
+    function launchConfetti() {
+      resizeConfetti();
+      confettiParticles = Array.from({ length: 140 }, makeParticle);
+      if (confettiRAF) cancelAnimationFrame(confettiRAF);
+      function loop() {
+        cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+        confettiParticles.forEach((p) => {
+          p.x     += p.vx;
+          p.y     += p.vy;
+          p.angle += p.spin;
+          if (p.y > confettiCanvas.height * 0.8) p.alpha -= 0.025;
+          cctx.save();
+          cctx.globalAlpha = Math.max(0, p.alpha);
+          cctx.translate(p.x, p.y);
+          cctx.rotate(p.angle);
+          cctx.fillStyle = p.color;
+          cctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+          cctx.restore();
+        });
+        confettiParticles = confettiParticles.filter(p => p.alpha > 0);
+        if (overlay.classList.contains("active")) {
+          while (confettiParticles.length < 100) confettiParticles.push(makeParticle());
+          confettiRAF = requestAnimationFrame(loop);
+        } else {
+          if (confettiParticles.length > 0) confettiRAF = requestAnimationFrame(loop);
+          else cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+        }
+      }
+      confettiRAF = requestAnimationFrame(loop);
+    }
+
+    function stopConfetti() {
+      if (confettiRAF) { cancelAnimationFrame(confettiRAF); confettiRAF = null; }
+      confettiParticles = [];
+      cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    }
+
+    function init() {
+      canvas.width = 0;
+      drawWheel(currentRotation);
+    }
+    window.addEventListener("resize", () => drawWheel(currentRotation));
+    init();
+  </script>
+</body>
+</html>

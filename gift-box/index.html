@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Gift Box</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  body{
+    background:#0a0a1a;
+    color:#fff;
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    min-height:100dvh;
+    overflow-x:hidden;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+
+  /* ── Back Button ── */
+  .back-btn{
+    position:fixed;top:16px;left:16px;z-index:100;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.12);
+    color:#fff;border-radius:12px;
+    padding:10px 18px;font-size:15px;
+    cursor:pointer;backdrop-filter:blur(10px);
+    transition:background .2s,transform .15s;
+    text-decoration:none;display:inline-flex;align-items:center;gap:6px;
+  }
+  .back-btn:hover{background:rgba(255,255,255,.15);transform:scale(1.04)}
+  .back-btn:active{transform:scale(.96)}
+
+  /* ── Title ── */
+  .title-section{text-align:center;padding:60px 20px 10px}
+  .title{
+    font-size:clamp(32px,7vw,52px);font-weight:800;
+    background:linear-gradient(135deg,#ff6ec7,#ffd86e,#6ec6ff,#c96eff);
+    background-size:300% 300%;
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    background-clip:text;
+    animation:gradientShift 4s ease infinite;
+    letter-spacing:-1px;
+  }
+  .subtitle{
+    font-size:clamp(14px,3vw,18px);
+    color:rgba(255,255,255,.5);margin-top:6px;
+  }
+  @keyframes gradientShift{
+    0%,100%{background-position:0% 50%}
+    50%{background-position:100% 50%}
+  }
+
+  /* ── Grid ── */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:clamp(12px,3vw,24px);
+    padding:clamp(12px,3vw,24px);
+    max-width:520px;width:100%;
+    margin-top:10px;
+    perspective:1200px;
+  }
+
+  /* ── Gift Box Wrapper ── */
+  .box-wrap{
+    position:relative;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    aspect-ratio:1;
+    animation:bob 3s ease-in-out infinite;
+    transition:opacity .5s,transform .5s,filter .5s;
+    -webkit-user-select:none;user-select:none;
+  }
+  .box-wrap:nth-child(2){animation-delay:-.5s}
+  .box-wrap:nth-child(3){animation-delay:-1s}
+  .box-wrap:nth-child(4){animation-delay:-1.5s}
+  .box-wrap:nth-child(5){animation-delay:-2s}
+  .box-wrap:nth-child(6){animation-delay:-2.5s}
+
+  .box-wrap.faded{opacity:.12;transform:scale(.85);filter:blur(2px);pointer-events:none}
+  .box-wrap.selected{z-index:10}
+
+  @keyframes bob{
+    0%,100%{transform:translateY(0)}
+    50%{transform:translateY(-8px)}
+  }
+
+  /* ── Shake ── */
+  .box-wrap.shaking{animation:shake .12s ease-in-out 8}
+  @keyframes shake{
+    0%,100%{transform:translateX(0) rotate(0)}
+    25%{transform:translateX(-6px) rotate(-3deg)}
+    75%{transform:translateX(6px) rotate(3deg)}
+  }
+
+  /* ── 3D Gift Box ── */
+  .gift-box{
+    width:100%;height:100%;
+    position:relative;
+    transform-style:preserve-3d;
+    perspective:600px;
+  }
+
+  /* ── Box Body ── */
+  .box-body{
+    position:absolute;bottom:0;left:8%;right:8%;height:62%;
+    border-radius:6px 6px 4px 4px;
+    box-shadow:0 6px 24px rgba(0,0,0,.5), inset 0 -8px 16px rgba(0,0,0,.25);
+    overflow:hidden;
+  }
+  .box-body::before{
+    content:'';position:absolute;
+    left:50%;top:0;bottom:0;width:22%;
+    transform:translateX(-50%);
+    background:rgba(255,255,255,.18);
+    border-left:2px solid rgba(255,255,255,.25);
+    border-right:2px solid rgba(255,255,255,.25);
+  }
+  .box-body::after{
+    content:'';position:absolute;
+    top:0;left:0;right:0;height:40%;
+    background:linear-gradient(180deg,rgba(255,255,255,.12),transparent);
+    pointer-events:none;
+  }
+
+  /* ── Lid ── */
+  .box-lid{
+    position:absolute;top:18%;left:4%;right:4%;height:24%;
+    border-radius:6px 6px 3px 3px;
+    transform-origin:center bottom;
+    transition:transform .6s cubic-bezier(.34,1.56,.64,1);
+    box-shadow:0 -2px 10px rgba(0,0,0,.3),inset 0 2px 6px rgba(255,255,255,.15);
+    z-index:2;
+  }
+  .box-lid::before{
+    content:'';position:absolute;
+    left:50%;top:0;bottom:0;width:24%;
+    transform:translateX(-50%);
+    background:rgba(255,255,255,.18);
+    border-left:2px solid rgba(255,255,255,.25);
+    border-right:2px solid rgba(255,255,255,.25);
+  }
+  /* Bow */
+  .box-lid::after{
+    content:'';position:absolute;
+    top:-12px;left:50%;transform:translateX(-50%);
+    width:28px;height:16px;
+    background:radial-gradient(ellipse at 30% 80%,rgba(255,255,255,.35),transparent 60%),
+               radial-gradient(ellipse at 70% 80%,rgba(255,255,255,.35),transparent 60%);
+    border-radius:50% 50% 0 0;
+    filter:drop-shadow(0 -2px 4px rgba(0,0,0,.3));
+  }
+
+  .box-wrap.opened .box-lid{
+    transform:rotateX(-110deg) translateY(-10px);
+  }
+
+  /* ── Prize Inside ── */
+  .prize-inside{
+    position:absolute;
+    top:20%;left:0;right:0;
+    display:flex;flex-direction:column;align-items:center;
+    opacity:0;transform:scale(0) translateY(30px);
+    pointer-events:none;z-index:5;
+    transition:none;
+  }
+  .box-wrap.reveal .prize-inside{
+    animation:prizeFloat 0.8s cubic-bezier(.17,.89,.32,1.28) forwards;
+  }
+  @keyframes prizeFloat{
+    0%{opacity:0;transform:scale(0) translateY(30px)}
+    60%{opacity:1;transform:scale(1.25) translateY(-30px)}
+    80%{transform:scale(.95) translateY(-25px)}
+    100%{opacity:1;transform:scale(1.1) translateY(-28px)}
+  }
+  .prize-emoji{font-size:clamp(36px,10vw,56px);filter:drop-shadow(0 4px 12px rgba(0,0,0,.4))}
+
+  /* ── Box Colors ── */
+  .box-red .box-body{background:linear-gradient(135deg,#e63946,#c1121f)}
+  .box-red .box-lid{background:linear-gradient(135deg,#ef233c,#d90429)}
+
+  .box-blue .box-body{background:linear-gradient(135deg,#1d3557,#457b9d)}
+  .box-blue .box-lid{background:linear-gradient(135deg,#2a6f97,#468faf)}
+
+  .box-purple .box-body{background:linear-gradient(135deg,#7b2d8e,#9d4edd)}
+  .box-purple .box-lid{background:linear-gradient(135deg,#9d4edd,#c77dff)}
+
+  .box-green .box-body{background:linear-gradient(135deg,#1b7a3d,#2d9e52)}
+  .box-green .box-lid{background:linear-gradient(135deg,#2d9e52,#52c77e)}
+
+  .box-gold .box-body{background:linear-gradient(135deg,#b8860b,#daa520)}
+  .box-gold .box-lid{background:linear-gradient(135deg,#daa520,#f0c040)}
+
+  .box-pink .box-body{background:linear-gradient(135deg,#d63384,#e685b5)}
+  .box-pink .box-lid{background:linear-gradient(135deg,#e685b5,#f0a8c8)}
+
+  /* ── Result Overlay ── */
+  .result-overlay{
+    position:fixed;inset:0;z-index:200;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:rgba(10,10,26,.88);
+    backdrop-filter:blur(12px);
+    opacity:0;pointer-events:none;
+    transition:opacity .4s;
+    padding:20px;
+  }
+  .result-overlay.active{opacity:1;pointer-events:auto}
+
+  .result-card{
+    text-align:center;
+    padding:clamp(24px,5vw,48px);
+    border-radius:24px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.1);
+    backdrop-filter:blur(20px);
+    max-width:380px;width:100%;
+    transform:translateY(40px) scale(.9);
+    transition:transform .5s cubic-bezier(.17,.89,.32,1.28);
+  }
+  .result-overlay.active .result-card{transform:translateY(0) scale(1)}
+
+  .result-emoji{font-size:clamp(56px,15vw,80px);margin-bottom:12px;display:block}
+  .result-label{font-size:clamp(24px,6vw,36px);font-weight:800;margin-bottom:6px}
+  .result-desc{font-size:clamp(14px,3.5vw,18px);color:rgba(255,255,255,.6);margin-bottom:28px}
+  .result-tier{
+    display:inline-block;
+    padding:4px 14px;border-radius:20px;
+    font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
+    margin-bottom:24px;
+  }
+  .tier-legendary{background:linear-gradient(135deg,#ffd700,#ff8c00);color:#1a0a00;box-shadow:0 0 24px rgba(255,215,0,.4)}
+  .tier-epic{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;box-shadow:0 0 24px rgba(168,85,247,.4)}
+  .tier-rare{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;box-shadow:0 0 24px rgba(59,130,246,.4)}
+  .tier-common{background:linear-gradient(135deg,#6b7280,#4b5563);color:#fff}
+
+  /* Glow ring */
+  .result-glow{
+    position:absolute;top:50%;left:50%;
+    width:220px;height:220px;border-radius:50%;
+    transform:translate(-50%,-50%);
+    opacity:.3;filter:blur(60px);
+    pointer-events:none;z-index:-1;
+  }
+  .glow-legendary{background:#ffd700}
+  .glow-epic{background:#a855f7}
+  .glow-rare{background:#3b82f6}
+  .glow-common{background:#6b7280}
+
+  /* ── Play Again ── */
+  .play-again-btn{
+    padding:14px 36px;
+    border-radius:14px;border:none;
+    background:linear-gradient(135deg,#6366f1,#8b5cf6);
+    color:#fff;font-size:17px;font-weight:700;
+    cursor:pointer;
+    transition:transform .15s,box-shadow .2s;
+    box-shadow:0 4px 20px rgba(99,102,241,.4);
+  }
+  .play-again-btn:hover{transform:scale(1.05);box-shadow:0 6px 28px rgba(99,102,241,.5)}
+  .play-again-btn:active{transform:scale(.96)}
+
+  /* ── Sparkle ── */
+  .sparkle{
+    position:absolute;width:8px;height:8px;border-radius:50%;
+    pointer-events:none;z-index:6;
+    animation:sparklePop .7s ease-out forwards;
+  }
+  @keyframes sparklePop{
+    0%{opacity:1;transform:scale(0) translate(0,0)}
+    100%{opacity:0;transform:scale(1) translate(var(--sx),var(--sy))}
+  }
+
+  /* ── Confetti ── */
+  .confetti-piece{
+    position:fixed;top:-12px;
+    width:10px;height:10px;
+    z-index:300;pointer-events:none;
+    animation:confettiFall var(--dur) linear forwards;
+  }
+  @keyframes confettiFall{
+    0%{transform:translateY(0) rotateZ(0) rotateX(0);opacity:1}
+    85%{opacity:1}
+    100%{transform:translateY(105vh) rotateZ(var(--rz)) rotateX(720deg);opacity:0}
+  }
+
+  /* ── Instruction ── */
+  .instruction{
+    text-align:center;
+    font-size:clamp(13px,3vw,16px);
+    color:rgba(255,255,255,.4);
+    padding:8px 20px 24px;
+  }
+
+  /* ── Responsive ── */
+  @media(min-width:520px){
+    .grid{gap:28px;padding:28px}
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-btn">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  Back
+</a>
+
+<div class="title-section">
+  <h1 class="title">Gift Box</h1>
+  <p class="subtitle">Choose a box and reveal your prize!</p>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<p class="instruction" id="instruction">Tap a gift box to open it</p>
+
+<!-- Result Overlay -->
+<div class="result-overlay" id="resultOverlay">
+  <div class="result-card" style="position:relative;overflow:visible">
+    <div class="result-glow" id="resultGlow"></div>
+    <span class="result-emoji" id="resultEmoji"></span>
+    <div class="result-tier" id="resultTier"></div>
+    <div class="result-label" id="resultLabel"></div>
+    <div class="result-desc" id="resultDesc"></div>
+    <button class="play-again-btn" id="playAgainBtn">Play Again</button>
+  </div>
+</div>
+
+<script>
+/* ========================================================
+   PRIZE CONFIGURATION  --  Easy to customize!
+   ======================================================== */
+const PRIZES = [
+  { emoji: '\u{1F389}', label: 'Jackpot!',    description: 'You won the grand prize!',  tier: 'legendary' },
+  { emoji: '\u{1F381}', label: 'Gift Card',    description: '$50 gift card',              tier: 'epic'      },
+  { emoji: '\u2B50',     label: '500 Points',   description: 'Added to your account',     tier: 'rare'      },
+  { emoji: '\u{1F3C6}', label: 'Trophy',        description: 'Exclusive trophy badge',    tier: 'rare'      },
+  { emoji: '\u{1F4AB}', label: '200 Points',    description: 'Added to your account',     tier: 'common'    },
+  { emoji: '\u{1F388}', label: '100 Points',    description: 'Better luck next time!',    tier: 'common'    },
+];
+
+/* Weighted probability by tier */
+const TIER_WEIGHTS = {
+  legendary: 1,
+  epic: 3,
+  rare: 8,
+  common: 15,
+};
+
+const BOX_COLORS = ['red','blue','purple','green','gold','pink'];
+
+/* ── State ── */
+let boxPrizes = [];
+let isAnimating = false;
+
+/* ── DOM refs ── */
+const grid        = document.getElementById('grid');
+const instruction  = document.getElementById('instruction');
+const overlay      = document.getElementById('resultOverlay');
+const resultEmoji  = document.getElementById('resultEmoji');
+const resultLabel  = document.getElementById('resultLabel');
+const resultDesc   = document.getElementById('resultDesc');
+const resultTier   = document.getElementById('resultTier');
+const resultGlow   = document.getElementById('resultGlow');
+const playAgainBtn = document.getElementById('playAgainBtn');
+
+/* ── Weighted random pick ── */
+function weightedPick() {
+  const weighted = [];
+  PRIZES.forEach(p => {
+    const w = TIER_WEIGHTS[p.tier] || 5;
+    for (let i = 0; i < w; i++) weighted.push(p);
+  });
+  return weighted[Math.floor(Math.random() * weighted.length)];
+}
+
+/* ── Build boxes ── */
+function buildBoxes() {
+  grid.innerHTML = '';
+  boxPrizes = [];
+  isAnimating = false;
+  instruction.textContent = 'Tap a gift box to open it';
+  instruction.style.opacity = '1';
+  overlay.classList.remove('active');
+
+  /* Remove leftover confetti */
+  document.querySelectorAll('.confetti-piece').forEach(c => c.remove());
+
+  const colors = [...BOX_COLORS];
+  /* Shuffle colors */
+  for (let i = colors.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [colors[i], colors[j]] = [colors[j], colors[i]];
+  }
+
+  for (let i = 0; i < 6; i++) {
+    const prize = weightedPick();
+    boxPrizes.push(prize);
+
+    const wrap = document.createElement('div');
+    wrap.className = `box-wrap box-${colors[i]}`;
+    wrap.dataset.index = i;
+    wrap.setAttribute('role','button');
+    wrap.setAttribute('aria-label',`Gift box ${i+1}`);
+    wrap.innerHTML = `
+      <div class="gift-box">
+        <div class="box-body"></div>
+        <div class="box-lid"></div>
+        <div class="prize-inside">
+          <span class="prize-emoji">${prize.emoji}</span>
+        </div>
+      </div>`;
+    wrap.addEventListener('click', () => selectBox(i, wrap));
+    grid.appendChild(wrap);
+  }
+}
+
+/* ── Select Box ── */
+function selectBox(index, wrap) {
+  if (isAnimating) return;
+  isAnimating = true;
+  instruction.style.opacity = '0';
+
+  const allBoxes = grid.querySelectorAll('.box-wrap');
+
+  /* 1) Shake */
+  wrap.classList.add('shaking','selected');
+
+  setTimeout(() => {
+    wrap.classList.remove('shaking');
+
+    /* 2) Open lid */
+    wrap.classList.add('opened');
+
+    /* 3) Fade others */
+    allBoxes.forEach(b => {
+      if (b !== wrap) b.classList.add('faded');
+    });
+
+    /* 4) Reveal prize */
+    setTimeout(() => {
+      wrap.classList.add('reveal');
+      spawnSparkles(wrap);
+
+      const prize = boxPrizes[index];
+      if (prize.tier === 'legendary' || prize.tier === 'epic') {
+        spawnConfetti();
+      }
+
+      /* 5) Show result overlay */
+      setTimeout(() => showResult(prize), 1200);
+
+    }, 500);
+
+  }, 960);
+}
+
+/* ── Show Result ── */
+function showResult(prize) {
+  resultEmoji.textContent = prize.emoji;
+  resultLabel.textContent = prize.label;
+  resultDesc.textContent  = prize.description;
+
+  resultTier.textContent  = prize.tier;
+  resultTier.className    = `result-tier tier-${prize.tier}`;
+
+  resultGlow.className = `result-glow glow-${prize.tier}`;
+
+  overlay.classList.add('active');
+}
+
+/* ── Sparkles ── */
+function spawnSparkles(wrap) {
+  const rect = wrap.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height * 0.3;
+  const colors = ['#ffd700','#ff6ec7','#6ec6ff','#c96eff','#fff'];
+
+  for (let i = 0; i < 14; i++) {
+    const s = document.createElement('div');
+    s.className = 'sparkle';
+    const angle = (Math.PI * 2 / 14) * i + Math.random() * 0.4;
+    const dist = 30 + Math.random() * 50;
+    s.style.cssText = `
+      left:${cx}px;top:${cy}px;
+      background:${colors[i % colors.length]};
+      --sx:${Math.cos(angle) * dist}px;
+      --sy:${Math.sin(angle) * dist}px;
+    `;
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 750);
+  }
+}
+
+/* ── Confetti ── */
+function spawnConfetti() {
+  const colors = ['#ff6ec7','#ffd86e','#6ec6ff','#c96eff','#52c77e','#ef233c','#fff'];
+  for (let i = 0; i < 60; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti-piece';
+    const dur = 2 + Math.random() * 2;
+    const left = Math.random() * 100;
+    const w = 6 + Math.random() * 8;
+    const h = 6 + Math.random() * 6;
+    const rz = (Math.random() * 720 - 360) + 'deg';
+    const delay = Math.random() * 0.8;
+    c.style.cssText = `
+      left:${left}%;width:${w}px;height:${h}px;
+      background:${colors[i % colors.length]};
+      border-radius:${Math.random()>.5?'50%':'2px'};
+      --dur:${dur}s;--rz:${rz};
+      animation-delay:${delay}s;
+    `;
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), (dur + delay) * 1000 + 100);
+  }
+}
+
+/* ── Play Again ── */
+playAgainBtn.addEventListener('click', () => {
+  overlay.classList.remove('active');
+  setTimeout(buildBoxes, 400);
+});
+
+/* ── Init ── */
+buildBoxes();
+</script>
+</body>
+</html>

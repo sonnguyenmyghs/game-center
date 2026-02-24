@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Christmas Scratch Card - Game Center</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a1a;
+      color: #fff;
+      min-height: 100vh;
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background:
+        radial-gradient(ellipse at 20% 30%, rgba(22,163,74,0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 15%, rgba(220,38,38,0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 80%, rgba(0,120,180,0.12) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Snowflakes ─────────────────────────────────────────────── */
+    .snowflake {
+      position: fixed;
+      top: -30px;
+      color: rgba(180,220,255,0.7);
+      font-size: 1.4rem;
+      pointer-events: none;
+      z-index: 0;
+      animation: snowfall linear infinite;
+      user-select: none;
+    }
+
+    @keyframes snowfall {
+      0%   { transform: translateY(0)      rotate(0deg);   opacity: 0.8; }
+      100% { transform: translateY(110vh)  rotate(360deg); opacity: 0.2; }
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────── */
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px 16px 60px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Back button ─────────────────────────────────────────────── */
+    .back-btn {
+      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      font-size: 0.95rem;
+      padding: 8px 12px;
+      border-radius: 10px;
+      transition: all 0.2s;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 12px;
+    }
+    .back-btn:hover { color:#fff; background:rgba(255,255,255,0.1); }
+
+    /* ── Title ───────────────────────────────────────────────────── */
+    .title {
+      font-size: clamp(1.6rem, 6vw, 2.2rem);
+      font-weight: 900;
+      text-align: center;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, #dc2626 0%, #16a34a 30%, #ca8a04 60%, #ffffff 80%, #dc2626 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 3s linear infinite;
+      letter-spacing: -0.5px;
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: 0% center; }
+      100% { background-position: 200% center; }
+    }
+
+    .subtitle {
+      font-size: clamp(0.78rem, 2.8vw, 0.9rem);
+      color: rgba(255,255,255,0.55);
+      text-align: center;
+      margin-bottom: 24px;
+      max-width: 320px;
+      line-height: 1.5;
+    }
+
+    /* ── Prize legend ────────────────────────────────────────────── */
+    .prize-legend {
+      width: 100%;
+      max-width: 360px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 16px;
+    }
+    .prize-legend-title {
+      grid-column: 1 / -1;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.35);
+      margin-bottom: 4px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.8rem;
+    }
+    .legend-item .lem { font-size: 1.2rem; line-height:1; }
+    .legend-item .linfo { display:flex; flex-direction:column; }
+    .legend-item .lname { color: rgba(255,255,255,0.4); font-size: 0.65rem; margin-top:1px; }
+    .legend-item .lval  { margin-left: auto; color: #ca8a04; font-weight: 700; font-size: 0.78rem; white-space:nowrap; }
+    .legend-item.rare .lval { color: #ef4444; }
+
+    /* ── Scratch area ────────────────────────────────────────────── */
+    .scratch-area {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .slot {
+      position: relative;
+      width:  clamp(90px, 27vw, 110px);
+      height: clamp(90px, 27vw, 110px);
+      border-radius: 14px;
+    }
+
+    /* Animated Christmas border */
+    .slot::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 15px;
+      background: linear-gradient(135deg, #dc2626, #16a34a, #ca8a04, #dc2626);
+      background-size: 300% 300%;
+      animation: borderAnim 4s linear infinite;
+      z-index: -1;
+    }
+    @keyframes borderAnim {
+      0%   { background-position: 0% 0%; }
+      100% { background-position: 300% 300%; }
+    }
+
+    .prize-display {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border-radius: 14px;
+      gap: 4px;
+      overflow: hidden;
+    }
+    .prize-display .prize-emoji { font-size: clamp(2rem, 7vw, 2.6rem); line-height:1; }
+    .prize-display .prize-name  { font-size:0.52rem; color:rgba(255,255,255,0.35); text-align:center; max-width:78px; line-height:1.2; }
+
+    .scratch-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      border-radius: 14px;
+      touch-action: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+
+    /* ── Hint ────────────────────────────────────────────────────── */
+    .hint-text {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.35);
+      text-align: center;
+      margin-bottom: 24px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity:0.35; }
+      50%      { opacity:0.75; }
+    }
+
+    /* ── How-to ──────────────────────────────────────────────────── */
+    .how-to { width:100%; max-width:360px; margin-bottom:14px; }
+    .how-to-title {
+      font-size: 0.7rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:0.08em; color:rgba(255,255,255,0.3);
+      text-align:center; margin-bottom:8px;
+    }
+    .how-to-steps { display:flex; gap:8px; }
+    .step {
+      flex:1; background:rgba(255,255,255,0.03);
+      border:1px solid rgba(255,255,255,0.06);
+      border-radius:12px; padding:10px 6px; text-align:center;
+    }
+    .step-icon { font-size:1.3rem; margin-bottom:4px; }
+    .step-text { font-size:0.63rem; color:rgba(255,255,255,0.38); line-height:1.3; }
+
+    /* ── Win info strip ──────────────────────────────────────────── */
+    .win-info { display:flex; gap:10px; width:100%; max-width:360px; margin-bottom:16px; }
+    .win-info-item {
+      flex:1; background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.07);
+      border-radius:12px; padding:10px 6px; text-align:center;
+    }
+    .wii-val   { font-size:1.15rem; font-weight:800; color:#ca8a04; }
+    .wii-label { font-size:0.62rem; color:rgba(255,255,255,0.33); margin-top:2px; }
+
+    /* ── Result overlay ──────────────────────────────────────────── */
+    .result-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.84);
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+      animation: fadeIn 0.25s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity:0; }
+      to   { opacity:1; }
+    }
+
+    .result-card {
+      background: linear-gradient(135deg, #0f172a 0%, #1a2744 100%);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px;
+      padding: 36px 28px;
+      text-align: center;
+      max-width: 320px;
+      width: 100%;
+      animation: slideUp 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      position: relative;
+      overflow: hidden;
+    }
+    .result-card::before {
+      content:'';
+      position:absolute; top:0; left:0; right:0; height:3px;
+      background:linear-gradient(90deg,#dc2626,#16a34a,#ca8a04,#dc2626);
+      background-size:200% 100%;
+      animation: shimmer 2s linear infinite;
+    }
+    @keyframes slideUp {
+      from { opacity:0; transform:translateY(40px) scale(0.88); }
+      to   { opacity:1; transform:translateY(0)    scale(1);    }
+    }
+    .result-card.win-card {
+      border-color: rgba(202,138,4,0.4);
+      box-shadow: 0 0 40px rgba(202,138,4,0.15);
+    }
+
+    /* Result symbols row */
+    .result-symbols { display:flex; gap:8px; justify-content:center; margin:10px 0 6px; }
+    .result-sym {
+      width:54px; height:54px;
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius:12px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.8rem; line-height:1;
+    }
+    .result-sym.matched {
+      background:rgba(202,138,4,0.15);
+      border-color:rgba(202,138,4,0.4);
+      box-shadow:0 0 16px rgba(202,138,4,0.2);
+    }
+
+    /* Stars */
+    .stars { display:flex; gap:4px; justify-content:center; margin:6px 0 12px; }
+    .star  { font-size:1.4rem; animation:starPop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards; opacity:0; }
+    .star:nth-child(1){ animation-delay:0.05s; }
+    .star:nth-child(2){ animation-delay:0.15s; }
+    .star:nth-child(3){ animation-delay:0.25s; }
+    @keyframes starPop {
+      from { opacity:0; transform:scale(0) rotate(-30deg); }
+      to   { opacity:1; transform:scale(1) rotate(0deg);   }
+    }
+
+    .btn-again {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #dc2626, #16a34a);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      padding: 14px 32px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 16px rgba(220,38,38,0.3);
+      margin-top: 4px;
+      width: 100%;
+    }
+    .btn-again:hover  { transform:translateY(-2px); box-shadow:0 8px 24px rgba(220,38,38,0.45); }
+    .btn-again:active { transform:translateY(0); }
+
+    /* ── Confetti ────────────────────────────────────────────────── */
+    .confetti-piece {
+      position: fixed;
+      top: -12px;
+      width: 8px; height: 8px;
+      z-index: 200;
+      animation: confettiFall linear forwards;
+      pointer-events: none;
+    }
+    @keyframes confettiFall {
+      0%   { transform:translateY(0)     rotate(0deg);   opacity:1;   }
+      80%  { opacity:1; }
+      100% { transform:translateY(110vh) rotate(720deg); opacity:0;   }
+    }
+
+    @media (max-width:380px) {
+      .prize-legend { grid-template-columns:1fr; }
+      .scratch-area { gap:10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Snowflakes -->
+  <div class="snowflake" style="left:5%;animation-duration:11s;animation-delay:0s;font-size:1.2rem">&#10052;</div>
+  <div class="snowflake" style="left:15%;animation-duration:14s;animation-delay:2s;font-size:0.9rem">&#10053;</div>
+  <div class="snowflake" style="left:28%;animation-duration:10s;animation-delay:1s;font-size:1.5rem">&#10052;</div>
+  <div class="snowflake" style="left:42%;animation-duration:13s;animation-delay:4s;font-size:1rem">&#10054;</div>
+  <div class="snowflake" style="left:56%;animation-duration:9s;animation-delay:0.5s;font-size:1.3rem">&#10052;</div>
+  <div class="snowflake" style="left:68%;animation-duration:15s;animation-delay:3s;font-size:0.85rem">&#10053;</div>
+  <div class="snowflake" style="left:80%;animation-duration:11s;animation-delay:1.5s;font-size:1.1rem">&#10054;</div>
+  <div class="snowflake" style="left:92%;animation-duration:12s;animation-delay:5s;font-size:1.4rem">&#10052;</div>
+
+  <div class="container">
+    <a href="../index.html" class="back-btn">&#8592; Back</a>
+
+    <h1 class="title">&#127876; Christmas Scratch Card</h1>
+    <p class="subtitle">Scratch to reveal your prize &mdash; Match 3 identical symbols to win!</p>
+
+    <!-- Prize legend -->
+    <div class="prize-legend">
+      <div class="prize-legend-title">Christmas Prize Table</div>
+
+      <div class="legend-item rare">
+        <span class="lem">&#127876;</span>
+        <div class="linfo">
+          <span>Christmas Tree</span>
+          <span class="lname">Rare</span>
+        </div>
+        <span class="lval">500 pts</span>
+      </div>
+
+      <div class="legend-item rare">
+        <span class="lem">&#127873;</span>
+        <div class="linfo">
+          <span>Christmas Gift</span>
+          <span class="lname">Rare</span>
+        </div>
+        <span class="lval">200 pts</span>
+      </div>
+
+      <div class="legend-item">
+        <span class="lem">&#129420;</span>
+        <div class="linfo">
+          <span>Reindeer</span>
+          <span class="lname">Common</span>
+        </div>
+        <span class="lval">100 pts</span>
+      </div>
+
+      <div class="legend-item">
+        <span class="lem">&#10052;&#65039;</span>
+        <div class="linfo">
+          <span>Snowflake</span>
+          <span class="lname">Common</span>
+        </div>
+        <span class="lval">50 pts</span>
+      </div>
+
+      <div class="legend-item">
+        <span class="lem">&#128276;</span>
+        <div class="linfo">
+          <span>Christmas Bell</span>
+          <span class="lname">Common</span>
+        </div>
+        <span class="lval">20 pts</span>
+      </div>
+    </div>
+
+    <!-- Scratch slots -->
+    <div class="scratch-area">
+      <div class="slot" id="slot-0">
+        <div class="prize-display" id="prize-0"></div>
+        <canvas class="scratch-canvas" id="canvas-0" width="120" height="120"></canvas>
+      </div>
+      <div class="slot" id="slot-1">
+        <div class="prize-display" id="prize-1"></div>
+        <canvas class="scratch-canvas" id="canvas-1" width="120" height="120"></canvas>
+      </div>
+      <div class="slot" id="slot-2">
+        <div class="prize-display" id="prize-2"></div>
+        <canvas class="scratch-canvas" id="canvas-2" width="120" height="120"></canvas>
+      </div>
+    </div>
+
+    <p class="hint-text" id="hint-text">&#9757;&#65039; Scratch to reveal the symbols</p>
+
+    <!-- How to play -->
+    <div class="how-to">
+      <div class="how-to-title">How to Play</div>
+      <div class="how-to-steps">
+        <div class="step">
+          <div class="step-icon">&#128070;</div>
+          <div class="step-text">Use your finger to scratch the card</div>
+        </div>
+        <div class="step">
+          <div class="step-icon">&#128269;</div>
+          <div class="step-text">Reveal the hidden symbols underneath</div>
+        </div>
+        <div class="step">
+          <div class="step-icon">&#127873;</div>
+          <div class="step-text">Match 3 identical symbols to win!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats strip -->
+    <div class="win-info">
+      <div class="win-info-item">
+        <div class="wii-val">25%</div>
+        <div class="wii-label">Win Rate</div>
+      </div>
+      <div class="win-info-item">
+        <div class="wii-val">5</div>
+        <div class="wii-label">Prize Types</div>
+      </div>
+      <div class="win-info-item">
+        <div class="wii-val">500 pts</div>
+        <div class="wii-label">Top Prize</div>
+      </div>
+    </div>
+
+    <!-- Result overlay -->
+    <div class="result-overlay" id="result-overlay">
+      <div class="result-card" id="result-card">
+        <button class="btn-again" onclick="initGame()">&#127876; Play Again</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SYMBOLS = [
+      { emoji: '\u{1F384}', name: 'Christmas Tree',   value: 500, rare: true  },
+      { emoji: '\u{1F381}', name: 'Christmas Gift',   value: 200, rare: true  },
+      { emoji: '\u{1F98C}', name: 'Reindeer',         value: 100, rare: false },
+      { emoji: '\u2744\uFE0F', name: 'Snowflake',    value: 50,  rare: false },
+      { emoji: '\u{1F514}', name: 'Christmas Bell',   value: 20,  rare: false },
+    ];
+
+    let symbols = [];
+    let revealedSlots = [false, false, false];
+    let gameOver = false;
+
+    /* ── Deterministic dot pattern ─────────────────────────────── */
+    function mulberry32(seed) {
+      return function() {
+        seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+        var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    /* ── Symbol generation ─────────────────────────────────────── */
+    function generateSymbols() {
+      const isWin = Math.random() < 0.25;
+      if (isWin) {
+        const sym = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+        return [sym, sym, sym];
+      }
+      let result;
+      do {
+        result = Array.from({ length: 3 }, () =>
+          SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]
+        );
+      } while (
+        result[0].emoji === result[1].emoji &&
+        result[1].emoji === result[2].emoji
+      );
+      return result;
+    }
+
+    /* ── Draw scratch surface ──────────────────────────────────── */
+    function drawScratchSurface(ctx, W, H, seed) {
+      ctx.clearRect(0, 0, W, H);
+
+      // Christmas gradient: deep-red → dark-green → deep-red
+      const grad = ctx.createLinearGradient(0, 0, W, H);
+      grad.addColorStop(0,    '#7f1d1d');
+      grad.addColorStop(0.35, '#991b1b');
+      grad.addColorStop(0.5,  '#14532d');
+      grad.addColorStop(0.65, '#166534');
+      grad.addColorStop(1,    '#7f1d1d');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(0, 0, W, H, 14);
+      } else {
+        ctx.rect(0, 0, W, H);
+      }
+      ctx.fill();
+
+      // Diagonal texture stripes
+      ctx.save();
+      ctx.globalAlpha = 0.06;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      for (let x = -H; x < W + H; x += 11) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x + H, H);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Snowdots (deterministic)
+      const rng = mulberry32(seed || 42);
+      ctx.fillStyle = 'rgba(255,255,255,0.22)';
+      for (let i = 0; i < 18; i++) {
+        ctx.beginPath();
+        ctx.arc(rng() * W, rng() * H, rng() * 3 + 1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // "CAO" label
+      ctx.fillStyle = 'rgba(255,255,255,0.65)';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('SCRATCH \u2744', W / 2, H / 2);
+    }
+
+    /* ── Init game ─────────────────────────────────────────────── */
+    function initGame() {
+      symbols       = generateSymbols();
+      revealedSlots = [false, false, false];
+      gameOver      = false;
+
+      document.getElementById('result-overlay').style.display = 'none';
+      document.getElementById('hint-text').textContent =
+        '\u261D\uFE0F Scratch to reveal the symbols';
+
+      for (let i = 0; i < 3; i++) {
+        // Prize display
+        const prizeEl = document.getElementById('prize-' + i);
+        prizeEl.innerHTML =
+          '<span class="prize-emoji">' + symbols[i].emoji + '</span>' +
+          '<span class="prize-name">'  + symbols[i].name  + '</span>';
+
+        // Canvas
+        initScratchCanvas(i);
+      }
+    }
+
+    /* ── Init canvas for one slot ──────────────────────────────── */
+    function initScratchCanvas(idx) {
+      const oldCanvas = document.getElementById('canvas-' + idx);
+      const parent    = oldCanvas.parentNode;
+
+      // Clone removes all old event listeners
+      const canvas  = oldCanvas.cloneNode(false);
+      canvas.id     = 'canvas-' + idx;
+      parent.replaceChild(canvas, oldCanvas);
+
+      const ctx = canvas.getContext('2d');
+      const W   = canvas.width;
+      const H   = canvas.height;
+
+      drawScratchSurface(ctx, W, H, idx * 9973 + Date.now() % 997);
+
+      let isDrawing = false;
+
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const sx   = W / rect.width;
+        const sy   = H / rect.height;
+        const src  = e.touches ? e.touches[0] : e;
+        return {
+          x: (src.clientX - rect.left) * sx,
+          y: (src.clientY - rect.top)  * sy
+        };
+      }
+
+      function scratch(x, y) {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(x, y, 26, 0, Math.PI * 2);
+        ctx.fill();
+        checkReveal(canvas, idx);
+      }
+
+      canvas.addEventListener('mousedown', e => {
+        isDrawing = true;
+        const p = getPos(e); scratch(p.x, p.y);
+      });
+      canvas.addEventListener('mousemove', e => {
+        if (!isDrawing) return;
+        const p = getPos(e); scratch(p.x, p.y);
+      });
+      canvas.addEventListener('mouseup',    () => { isDrawing = false; });
+      canvas.addEventListener('mouseleave', () => { isDrawing = false; });
+
+      canvas.addEventListener('touchstart', e => {
+        e.preventDefault(); isDrawing = true;
+        const p = getPos(e); scratch(p.x, p.y);
+      }, { passive: false });
+      canvas.addEventListener('touchmove', e => {
+        e.preventDefault();
+        if (!isDrawing) return;
+        const p = getPos(e); scratch(p.x, p.y);
+      }, { passive: false });
+      canvas.addEventListener('touchend', e => {
+        e.preventDefault(); isDrawing = false;
+      }, { passive: false });
+    }
+
+    /* ── Check reveal threshold ────────────────────────────────── */
+    function checkReveal(canvas, idx) {
+      if (revealedSlots[idx]) return;
+      const ctx  = canvas.getContext('2d');
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let transparent = 0;
+      for (let i = 3; i < data.length; i += 4) {
+        if (data[i] < 128) transparent++;
+      }
+      const ratio = transparent / (canvas.width * canvas.height);
+      if (ratio > 0.55) {
+        revealedSlots[idx]        = true;
+        canvas.style.transition   = 'opacity 0.35s ease';
+        canvas.style.opacity      = '0';
+        canvas.style.pointerEvents = 'none';
+
+        const done = revealedSlots.filter(Boolean).length;
+        if (done < 3) {
+          document.getElementById('hint-text').textContent =
+            '\u261D\uFE0F ' + (3 - done) + ' slot' + (3 - done === 1 ? '' : 's') + ' remaining!';
+        }
+        if (revealedSlots.every(Boolean) && !gameOver) {
+          gameOver = true;
+          setTimeout(showResult, 500);
+        }
+      }
+    }
+
+    /* ── Show result ───────────────────────────────────────────── */
+    function showResult() {
+      const won     = symbols[0].emoji === symbols[1].emoji &&
+                      symbols[1].emoji === symbols[2].emoji;
+      const overlay = document.getElementById('result-overlay');
+      const card    = document.getElementById('result-card');
+      const sym     = symbols[0];
+
+      if (won) {
+        card.className = 'result-card win-card';
+        card.innerHTML =
+          '<div style="font-size:2.8rem;margin-bottom:6px">\uD83C\uDF89</div>' +
+          '<div style="font-size:1.5rem;font-weight:900;background:linear-gradient(135deg,#fbbf24,#ffd700);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">Congratulations!</div>' +
+          '<div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-bottom:12px">You won a Christmas prize!</div>' +
+          '<div class="stars"><span class="star">\u2B50</span><span class="star">\u2B50</span><span class="star">\u2B50</span></div>' +
+          '<div class="result-symbols">' +
+            '<div class="result-sym matched">' + sym.emoji + '</div>' +
+            '<div class="result-sym matched">' + sym.emoji + '</div>' +
+            '<div class="result-sym matched">' + sym.emoji + '</div>' +
+          '</div>' +
+          '<div style="font-size:1rem;font-weight:700;margin-bottom:4px;margin-top:10px">' + sym.name + '</div>' +
+          '<div style="color:#86efac;font-size:0.9rem;font-weight:600;margin-bottom:22px">+' + sym.value + ' bonus points \uD83C\uDF81</div>' +
+          '<button class="btn-again" onclick="initGame()">\uD83C\uDF84 Play Again</button>';
+        spawnConfetti();
+      } else {
+        card.className = 'result-card';
+        card.innerHTML =
+          '<div style="font-size:2.8rem;margin-bottom:8px">\uD83D\uDE14</div>' +
+          '<div style="font-size:1.3rem;font-weight:800;margin-bottom:6px">No Match</div>' +
+          '<div style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-bottom:12px">Better luck next time!</div>' +
+          '<div class="result-symbols">' +
+            '<div class="result-sym">' + symbols[0].emoji + '</div>' +
+            '<div class="result-sym">' + symbols[1].emoji + '</div>' +
+            '<div class="result-sym">' + symbols[2].emoji + '</div>' +
+          '</div>' +
+          '<div style="font-size:0.75rem;color:rgba(255,255,255,0.3);margin-top:10px;margin-bottom:22px">You need 3 matching symbols to win</div>' +
+          '<button class="btn-again" onclick="initGame()">\uD83C\uDF84 Play Again</button>';
+      }
+
+      overlay.style.display = 'flex';
+    }
+
+    /* ── Confetti ──────────────────────────────────────────────── */
+    function spawnConfetti() {
+      const colors = ['#dc2626','#16a34a','#ca8a04','#ffffff','#ef4444','#22c55e','#fbbf24'];
+      for (let i = 0; i < 70; i++) {
+        setTimeout(function() {
+          const el   = document.createElement('div');
+          el.className = 'confetti-piece';
+          const size = 6 + Math.random() * 8;
+          el.style.left              = (Math.random() * 100) + 'vw';
+          el.style.background        = colors[Math.floor(Math.random() * colors.length)];
+          el.style.animationDuration = (1.8 + Math.random() * 2.2) + 's';
+          el.style.width             = size + 'px';
+          el.style.height            = size + 'px';
+          el.style.borderRadius      = Math.random() > 0.5 ? '50%' : '2px';
+          el.style.transform         = 'rotate(' + (Math.random() * 360) + 'deg)';
+          document.body.appendChild(el);
+          el.addEventListener('animationend', function() { el.remove(); });
+        }, i * 28);
+      }
+    }
+
+    /* ── Boot ──────────────────────────────────────────────────── */
+    initGame();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Center</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a1a;
+      color: #fff;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Background animation */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(72, 49, 212, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(255, 56, 100, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 80%, rgba(0, 198, 255, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      padding: 40px 0 24px;
+    }
+
+    header .logo {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ff3864, #6c5ce7, #00c6ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -1px;
+    }
+
+    header .tagline {
+      margin-top: 8px;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.95rem;
+      font-weight: 400;
+    }
+
+    /* ── Category Filter Tabs ── */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 0 4px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+
+    .filter-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .filter-tab:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .filter-tab.active {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    /* Active accent per category */
+    .filter-tab[data-filter="trungthu"].active {
+      background: rgba(217, 119, 6, 0.2);
+      border-color: rgba(217, 119, 6, 0.5);
+      color: #fbbf24;
+    }
+    .filter-tab[data-filter="noel"].active {
+      background: rgba(22, 163, 74, 0.2);
+      border-color: rgba(22, 163, 74, 0.5);
+      color: #86efac;
+    }
+    .filter-tab[data-filter="tet"].active {
+      background: rgba(220, 38, 38, 0.2);
+      border-color: rgba(220, 38, 38, 0.5);
+      color: #fca5a5;
+    }
+    .filter-tab[data-filter="all"].active {
+      background: rgba(108, 92, 231, 0.2);
+      border-color: rgba(108, 92, 231, 0.5);
+      color: #c4b5fd;
+    }
+
+    /* Count badge on filter tabs */
+    .filter-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      border-radius: 10px;
+      padding: 0 5px;
+      background: rgba(255,255,255,0.1);
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    /* ── Section Divider ── */
+    .section-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255,255,255,0.3);
+      padding: 20px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.07);
+    }
+    .section-label.hidden { display: none; }
+
+    /* Game Grid */
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 4px;
+    }
+
+    /* Game Card */
+    .game-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, opacity 0.25s ease;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .game-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .game-card:active {
+      transform: translateY(-2px) scale(0.98);
+    }
+
+    /* Hidden state for filtering */
+    .game-card.hidden {
+      display: none;
+    }
+
+    /* Event card badge */
+    .event-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      z-index: 2;
+    }
+    .badge-trungthu {
+      background: rgba(217,119,6,0.3);
+      border: 1px solid rgba(217,119,6,0.5);
+      color: #fbbf24;
+    }
+    .badge-noel {
+      background: rgba(22,163,74,0.3);
+      border: 1px solid rgba(22,163,74,0.5);
+      color: #86efac;
+    }
+    .badge-tet {
+      background: rgba(220,38,38,0.3);
+      border: 1px solid rgba(220,38,38,0.5);
+      color: #fca5a5;
+    }
+
+    .card-thumbnail {
+      width: 100%;
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-thumbnail .icon {
+      position: relative;
+      z-index: 1;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+    }
+
+    .card-body {
+      padding: 20px;
+    }
+
+    .card-body h3 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .card-body .description {
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 0.85rem;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .play-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: background 0.2s ease;
+    }
+
+    .game-card:hover .play-btn {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .play-btn .arrow {
+      font-size: 1rem;
+      transition: transform 0.2s ease;
+    }
+
+    .game-card:hover .play-btn .arrow {
+      transform: translateX(3px);
+    }
+
+    /* ── Color themes — existing 25 games ── */
+    .theme-orange .card-thumbnail { background: linear-gradient(135deg, #1a1205, #2d1f08); }
+    .theme-orange .tag { background: rgba(255, 165, 0, 0.15); color: #ffa500; }
+
+    .theme-green .card-thumbnail { background: linear-gradient(135deg, #051a0a, #0d2d15); }
+    .theme-green .tag { background: rgba(0, 255, 100, 0.12); color: #00e676; }
+
+    .theme-blue .card-thumbnail { background: linear-gradient(135deg, #05101a, #0a1f2d); }
+    .theme-blue .tag { background: rgba(0, 180, 255, 0.12); color: #00b4ff; }
+
+    .theme-purple .card-thumbnail { background: linear-gradient(135deg, #12051a, #200d2d); }
+    .theme-purple .tag { background: rgba(160, 100, 255, 0.15); color: #a064ff; }
+
+    .theme-pink .card-thumbnail { background: linear-gradient(135deg, #1a0510, #2d0d1f); }
+    .theme-pink .tag { background: rgba(255, 56, 100, 0.15); color: #ff3864; }
+
+    .theme-cyan .card-thumbnail { background: linear-gradient(135deg, #051a1a, #0d2d2d); }
+    .theme-cyan .tag { background: rgba(0, 230, 230, 0.12); color: #00e6e6; }
+
+    .theme-yellow .card-thumbnail { background: linear-gradient(135deg, #1a1a05, #2d2d0d); }
+    .theme-yellow .tag { background: rgba(255, 230, 0, 0.12); color: #ffe600; }
+
+    .theme-red .card-thumbnail { background: linear-gradient(135deg, #1a0505, #2d0d0d); }
+    .theme-red .tag { background: rgba(255, 60, 60, 0.15); color: #ff3c3c; }
+
+    .theme-lime .card-thumbnail { background: linear-gradient(135deg, #0f1a05, #1a2d0d); }
+    .theme-lime .tag { background: rgba(180, 255, 0, 0.12); color: #b4ff00; }
+
+    .theme-indigo .card-thumbnail { background: linear-gradient(135deg, #08051a, #100d2d); }
+    .theme-indigo .tag { background: rgba(90, 70, 255, 0.15); color: #5a46ff; }
+
+    .theme-teal .card-thumbnail { background: linear-gradient(135deg, #051a15, #0d2d25); }
+    .theme-teal .tag { background: rgba(0, 200, 150, 0.12); color: #00c896; }
+
+    .theme-rose .card-thumbnail { background: linear-gradient(135deg, #1a050f, #2d0d1a); }
+    .theme-rose .tag { background: rgba(255, 100, 150, 0.15); color: #ff6496; }
+
+    .theme-amber .card-thumbnail { background: linear-gradient(135deg, #1a1005, #2d1c0d); }
+    .theme-amber .tag { background: rgba(255, 190, 0, 0.15); color: #ffbe00; }
+
+    .theme-emerald .card-thumbnail { background: linear-gradient(135deg, #051a10, #0d2d1c); }
+    .theme-emerald .tag { background: rgba(0, 220, 130, 0.12); color: #00dc82; }
+
+    .theme-sky .card-thumbnail { background: linear-gradient(135deg, #051018, #0d1c2d); }
+    .theme-sky .tag { background: rgba(56, 180, 255, 0.12); color: #38b4ff; }
+
+    .theme-violet .card-thumbnail { background: linear-gradient(135deg, #10051a, #1c0d2d); }
+    .theme-violet .tag { background: rgba(180, 80, 255, 0.15); color: #b450ff; }
+
+    .theme-coral .card-thumbnail { background: linear-gradient(135deg, #1a0a05, #2d150d); }
+    .theme-coral .tag { background: rgba(255, 120, 80, 0.15); color: #ff7850; }
+
+    .theme-mint .card-thumbnail { background: linear-gradient(135deg, #051a18, #0d2d28); }
+    .theme-mint .tag { background: rgba(0, 240, 200, 0.12); color: #00f0c8; }
+
+    .theme-gold .card-thumbnail { background: linear-gradient(135deg, #1a1508, #2d2410); }
+    .theme-gold .tag { background: rgba(255, 215, 0, 0.15); color: #ffd700; }
+
+    .theme-magenta .card-thumbnail { background: linear-gradient(135deg, #1a0515, #2d0d24); }
+    .theme-magenta .tag { background: rgba(255, 0, 180, 0.15); color: #ff00b4; }
+
+    .theme-slate .card-thumbnail { background: linear-gradient(135deg, #0a0f1a, #141c2d); }
+    .theme-slate .tag { background: rgba(140, 160, 200, 0.15); color: #8ca0c8; }
+
+    .theme-rainbow .card-thumbnail { background: linear-gradient(135deg, #1a0a15, #0d1a2d, #1a1a05); }
+    .theme-rainbow .tag { background: linear-gradient(135deg, rgba(255,56,100,0.2), rgba(100,100,255,0.2)); color: #ff6496; }
+
+    .theme-neon .card-thumbnail { background: linear-gradient(135deg, #0a1a05, #051a1a); }
+    .theme-neon .tag { background: rgba(0, 255, 160, 0.15); color: #00ffa0; }
+
+    .theme-bronze .card-thumbnail { background: linear-gradient(135deg, #1a100a, #2d1c14); }
+    .theme-bronze .tag { background: rgba(205, 140, 60, 0.15); color: #cd8c3c; }
+
+    .theme-cherry .card-thumbnail { background: linear-gradient(135deg, #1a0508, #2d0d12); }
+    .theme-cherry .tag { background: rgba(255, 30, 80, 0.15); color: #ff1e50; }
+
+    /* ── Seasonal event card themes ── */
+
+    /* Trung Thu — amber/orange/warm */
+    .theme-mooncake .card-thumbnail {
+      background: linear-gradient(135deg, #1a0e00, #2d1c05, #1a0e00);
+      position: relative;
+    }
+    .theme-mooncake .card-thumbnail::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 70% 30%, rgba(255,190,50,0.12) 0%, transparent 60%);
+    }
+    .theme-mooncake .tag { background: rgba(217,119,6,0.2); color: #fbbf24; }
+    .theme-mooncake { border-color: rgba(217,119,6,0.12) !important; }
+    .theme-mooncake:hover { border-color: rgba(217,119,6,0.3) !important; }
+
+    .theme-lantern .card-thumbnail {
+      background: linear-gradient(135deg, #1a0800, #3d1a00, #1a0800);
+    }
+    .theme-lantern .tag { background: rgba(234,88,12,0.2); color: #fb923c; }
+    .theme-lantern { border-color: rgba(234,88,12,0.12) !important; }
+    .theme-lantern:hover { border-color: rgba(234,88,12,0.3) !important; }
+
+    .theme-harvest .card-thumbnail {
+      background: linear-gradient(135deg, #12100a, #201a08, #12100a);
+    }
+    .theme-harvest .tag { background: rgba(161,98,7,0.2); color: #fcd34d; }
+    .theme-harvest { border-color: rgba(161,98,7,0.12) !important; }
+    .theme-harvest:hover { border-color: rgba(161,98,7,0.3) !important; }
+
+    /* Noel — red/green/Christmas */
+    .theme-xmas-gift .card-thumbnail {
+      background: linear-gradient(135deg, #0a1a0a, #0d2d12, #0a1a0a);
+      position: relative;
+    }
+    .theme-xmas-gift .card-thumbnail::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 30% 70%, rgba(220,38,38,0.1) 0%, transparent 60%);
+    }
+    .theme-xmas-gift .tag { background: rgba(22,163,74,0.2); color: #86efac; }
+    .theme-xmas-gift { border-color: rgba(22,163,74,0.12) !important; }
+    .theme-xmas-gift:hover { border-color: rgba(22,163,74,0.3) !important; }
+
+    .theme-xmas-wheel .card-thumbnail {
+      background: linear-gradient(135deg, #1a0505, #2d0d0d, #0a1505);
+    }
+    .theme-xmas-wheel .tag { background: rgba(220,38,38,0.2); color: #fca5a5; }
+    .theme-xmas-wheel { border-color: rgba(220,38,38,0.12) !important; }
+    .theme-xmas-wheel:hover { border-color: rgba(220,38,38,0.3) !important; }
+
+    .theme-snowflake .card-thumbnail {
+      background: linear-gradient(135deg, #06101f, #0c1f38, #06101f);
+    }
+    .theme-snowflake .tag { background: rgba(96,165,250,0.2); color: #bfdbfe; }
+    .theme-snowflake { border-color: rgba(96,165,250,0.12) !important; }
+    .theme-snowflake:hover { border-color: rgba(96,165,250,0.3) !important; }
+
+    /* Tết — red/gold/Vietnamese New Year */
+    .theme-hongbao .card-thumbnail {
+      background: linear-gradient(135deg, #1a0505, #2d0808, #1a0505);
+      position: relative;
+    }
+    .theme-hongbao .card-thumbnail::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 40%, rgba(255,200,0,0.1) 0%, transparent 60%);
+    }
+    .theme-hongbao .tag { background: rgba(220,38,38,0.2); color: #fca5a5; }
+    .theme-hongbao { border-color: rgba(220,38,38,0.15) !important; }
+    .theme-hongbao:hover { border-color: rgba(220,38,38,0.35) !important; }
+
+    .theme-hoamain .card-thumbnail {
+      background: linear-gradient(135deg, #1a0808, #3d1010, #1a0808);
+    }
+    .theme-hoamain .tag { background: rgba(255,200,50,0.2); color: #ffd700; }
+    .theme-hoamain { border-color: rgba(255,200,50,0.12) !important; }
+    .theme-hoamain:hover { border-color: rgba(255,200,50,0.3) !important; }
+
+    .theme-blossom .card-thumbnail {
+      background: linear-gradient(135deg, #1a0510, #2d0d1a, #1a0a08);
+    }
+    .theme-blossom .tag { background: rgba(244,114,182,0.2); color: #fbcfe8; }
+    .theme-blossom { border-color: rgba(244,114,182,0.12) !important; }
+    .theme-blossom:hover { border-color: rgba(244,114,182,0.3) !important; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 0 20px;
+      color: rgba(255, 255, 255, 0.2);
+      font-size: 0.8rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 680px) {
+      .game-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      header .logo {
+        font-size: 2rem;
+      }
+
+      header {
+        padding: 28px 0 20px;
+      }
+
+      .card-thumbnail {
+        height: 150px;
+      }
+    }
+
+    @media (min-width: 681px) and (max-width: 1024px) {
+      .game-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">Game Center</div>
+      <p class="tagline">Play instantly in your browser &mdash; No install needed</p>
+    </header>
+
+    <!-- Category Filter Tabs -->
+    <div class="filter-bar" role="tablist" aria-label="Filter games by event">
+      <button class="filter-tab active" data-filter="all" role="tab" aria-selected="true">
+        🎮 All <span class="filter-count" id="count-all">34</span>
+      </button>
+      <button class="filter-tab" data-filter="trungthu" role="tab" aria-selected="false">
+        🎑 Mid-Autumn <span class="filter-count" id="count-trungthu">3</span>
+      </button>
+      <button class="filter-tab" data-filter="noel" role="tab" aria-selected="false">
+        🎄 Christmas <span class="filter-count" id="count-noel">3</span>
+      </button>
+      <button class="filter-tab" data-filter="tet" role="tab" aria-selected="false">
+        🧧 Tết <span class="filter-count" id="count-tet">3</span>
+      </button>
+      <button class="filter-tab" data-filter="general" role="tab" aria-selected="false">
+        🕹️ Games <span class="filter-count" id="count-general">25</span>
+      </button>
+    </div>
+
+    <!-- ── SEASONAL GAMES SECTION ── -->
+    <div class="section-label" id="section-events">✨ Seasonal Event Games</div>
+
+    <div class="game-grid" id="grid-events">
+
+      <!-- ── TRUNG THU ── -->
+      <a href="gift-box-trungthu/index.html" class="game-card theme-mooncake" data-category="trungthu">
+        <div class="card-thumbnail">
+          <span class="event-badge badge-trungthu">🎑 Mid-Autumn</span>
+          <span class="icon">🥮</span>
+        </div>
+        <div class="card-body">
+          <h3>Mid-Autumn Gift Box</h3>
+          <p class="description">Choose a mystery mooncake box and claim your Mid-Autumn reward! Mooncake vouchers, lanterns, and special bonus points await.</p>
+          <div class="card-footer">
+            <span class="tag">Mid-Autumn</span>
+            <span class="play-btn">Open box <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="lucky-wheel-trungthu/index.html" class="game-card theme-lantern" data-category="trungthu">
+        <div class="card-thumbnail">
+          <span class="event-badge badge-trungthu">🎑 Mid-Autumn</span>
+          <span class="icon">🏮</span>
+        </div>
+        <div class="card-body">
+          <h3>Mid-Autumn Lucky Wheel</h3>
+          <p class="description">Spin the Mid-Autumn lucky wheel! Win mooncake vouchers, lanterns, and incredibly attractive bonus points.</p>
+          <div class="card-footer">
+            <span class="tag">Mid-Autumn</span>
+            <span class="play-btn">Spin now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="scratch-card-trungthu/index.html" class="game-card theme-harvest" data-category="trungthu">
+        <div class="card-thumbnail">
+          <span class="event-badge badge-trungthu">🎑 Mid-Autumn</span>
+          <span class="icon">🌕</span>
+        </div>
+        <div class="card-body">
+          <h3>Mid-Autumn Scratch Card</h3>
+          <p class="description">Scratch under the full moon's glow! Match 3 identical symbols to claim your Mid-Autumn prize.</p>
+          <div class="card-footer">
+            <span class="tag">Mid-Autumn</span>
+            <span class="play-btn">Scratch now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <!-- ── NOEL ── -->
+      <a href="gift-box-noel/index.html" class="game-card theme-xmas-gift" data-category="noel">
+        <div class="card-thumbnail">
+          <span class="event-badge badge-noel">🎄 Christmas</span>
+          <span class="icon">🎁</span>
+        </div>
+        <div class="card-body">
+          <h3>Christmas Gift Box</h3>
+          <p class="description">Choose a mystery Christmas gift from Santa! Incredible year-end rewards are waiting for you.</p>
+          <div class="card-footer">
+            <span class="tag">Christmas</span>
+            <span class="play-btn">Open box <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="lucky-wheel-noel/index.html" class="game-card theme-xmas-wheel" data-category="noel">
+        <div class="card-thumbnail">
+          <span class="event-badge badge-noel">🎄 Christmas</span>
+          <span class="icon">🎄</span>
+        </div>
+        <div class="card-body">
+          <h3>Christmas Lucky Wheel</h3>
+          <p class="description">Spin the Christmas lucky wheel! Win gifts from Santa, shopping vouchers, and year-end bonus points.</p>
+          <div class="card-footer">
+            <span class="tag">Christmas</span>
+            <span class="play-btn">Spin now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="scratch-card-noel/index.html" class="game-card theme-snowflake" data-category="noel">
+        <div class="card-thumbnail">
+          <span class="event-badge badge-noel">🎄 Christmas</span>
+          <span class="icon">❄️</span>
+        </div>
+        <div class="card-body">
+          <h3>Christmas Scratch Card</h3>
+          <p class="description">Scratch the snowflakes to reveal your Christmas prize! Match 3 identical symbols and win big.</p>
+          <div class="card-footer">
+            <span class="tag">Christmas</span>
+            <span class="play-btn">Scratch now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <!-- ── TẾT ── -->
+      <a href="gift-box-tet/index.html" class="game-card theme-hongbao" data-category="tet">
+        <div class="card-thumbnail">
+          <span class="event-badge badge-tet">🧧 Tết</span>
+          <span class="icon">🧧</span>
+        </div>
+        <div class="card-body">
+          <h3>Lucky Red Envelope</h3>
+          <p class="description">Pick a red envelope and receive your Tết lucky money! Tết vouchers, bonus points, and a special golden envelope await you.</p>
+          <div class="card-footer">
+            <span class="tag">Tết</span>
+            <span class="play-btn">Claim envelope <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="lucky-wheel-tet/index.html" class="game-card theme-hoamain" data-category="tet">
+        <div class="card-thumbnail">
+          <span class="event-badge badge-tet">🧧 Tết</span>
+          <span class="icon">🌸</span>
+        </div>
+        <div class="card-body">
+          <h3>Tết Lucky Wheel</h3>
+          <p class="description">Spin your luck at the New Year! Golden red envelopes, Tết vouchers, lucky peach blossoms — Wealth and prosperity await!</p>
+          <div class="card-footer">
+            <span class="tag">Tết</span>
+            <span class="play-btn">Spin now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="scratch-card-tet/index.html" class="game-card theme-blossom" data-category="tet">
+        <div class="card-thumbnail">
+          <span class="event-badge badge-tet">🧧 Tết</span>
+          <span class="icon">🎆</span>
+        </div>
+        <div class="card-body">
+          <h3>Tết Scratch Card</h3>
+          <p class="description">Scratch to welcome the New Year! Match 3 identical red envelopes to win an incredibly exciting Tết prize.</p>
+          <div class="card-footer">
+            <span class="tag">Tết</span>
+            <span class="play-btn">Scratch now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+
+    <!-- ── GENERAL GAMES SECTION ── -->
+    <div class="section-label" id="section-general">🕹️ All Games</div>
+
+    <div class="game-grid" id="grid-general">
+
+      <a href="2048/index.html" class="game-card theme-orange" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🔢</span>
+        </div>
+        <div class="card-body">
+          <h3>2048</h3>
+          <p class="description">Swipe to merge numbers. Reach 2048 to win. Simple but insanely addictive!</p>
+          <div class="card-footer">
+            <span class="tag">Puzzle</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="flappy-bird/index.html" class="game-card theme-green" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🐦</span>
+        </div>
+        <div class="card-body">
+          <h3>Flappy Bird</h3>
+          <p class="description">Tap to fly, dodge the pipes. The legendary game that took the world by storm.</p>
+          <div class="card-footer">
+            <span class="tag">Arcade</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="snake/index.html" class="game-card theme-blue" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🐍</span>
+        </div>
+        <div class="card-body">
+          <h3>Snake</h3>
+          <p class="description">Guide the snake to eat food, the longer it gets the harder it is. A Nokia legend!</p>
+          <div class="card-footer">
+            <span class="tag">Classic</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="tic-tac-toe/index.html" class="game-card theme-purple" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">⭕</span>
+        </div>
+        <div class="card-body">
+          <h3>Tic Tac Toe</h3>
+          <p class="description">Classic 3x3 board game. Play against AI or challenge a friend on the same device.</p>
+          <div class="card-footer">
+            <span class="tag">Board</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="memory-card/index.html" class="game-card theme-pink" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🃏</span>
+        </div>
+        <div class="card-body">
+          <h3>Memory Card</h3>
+          <p class="description">Flip cards to find matching pairs. Train your memory with increasing difficulty.</p>
+          <div class="card-footer">
+            <span class="tag">Puzzle</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="breakout/index.html" class="game-card theme-cyan" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🧱</span>
+        </div>
+        <div class="card-body">
+          <h3>Breakout</h3>
+          <p class="description">Control the paddle, bounce the ball, break the bricks. Higher levels, tougher bricks!</p>
+          <div class="card-footer">
+            <span class="tag">Arcade</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="tetris/index.html" class="game-card theme-yellow" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🟦</span>
+        </div>
+        <div class="card-body">
+          <h3>Tetris</h3>
+          <p class="description">The legendary block stacker! Rotate and place blocks to complete rows and score points.</p>
+          <div class="card-footer">
+            <span class="tag">Classic</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="wordle/index.html" class="game-card theme-lime" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🔤</span>
+        </div>
+        <div class="card-body">
+          <h3>Wordle</h3>
+          <p class="description">Guess the 5-letter word in 6 tries. Color hints guide you. A new word every day!</p>
+          <div class="card-footer">
+            <span class="tag">Word</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="dino-runner/index.html" class="game-card theme-red" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🦖</span>
+        </div>
+        <div class="card-body">
+          <h3>Dino Runner</h3>
+          <p class="description">Endless dinosaur run! Jump over obstacles as speed increases over time.</p>
+          <div class="card-footer">
+            <span class="tag">Endless Run</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="whack-a-mole/index.html" class="game-card theme-indigo" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🐹</span>
+        </div>
+        <div class="card-body">
+          <h3>Whack-a-Mole</h3>
+          <p class="description">Whack the moles! Tap fast when they pop up. Quick reflexes are the key to victory.</p>
+          <div class="card-footer">
+            <span class="tag">Reaction</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="sudoku/index.html" class="game-card theme-teal" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">9️⃣</span>
+        </div>
+        <div class="card-body">
+          <h3>Sudoku</h3>
+          <p class="description">Fill the 9x9 grid with numbers 1-9. A classic logic puzzle that sharpens your mind.</p>
+          <div class="card-footer">
+            <span class="tag">Logic</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="color-match/index.html" class="game-card theme-rose" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🎨</span>
+        </div>
+        <div class="card-body">
+          <h3>Color Match</h3>
+          <p class="description">Pick the correct color, don't be fooled by the text! Test your reflexes and focus.</p>
+          <div class="card-footer">
+            <span class="tag">Reaction</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="block-blast/index.html" class="game-card theme-amber" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">💥</span>
+        </div>
+        <div class="card-body">
+          <h3>Block Blast</h3>
+          <p class="description">Drag blocks onto the 8x8 grid to fill rows and columns. The #1 hit game of 2025!</p>
+          <div class="card-footer">
+            <span class="tag">Trending</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="suika-game/index.html" class="game-card theme-emerald" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🍉</span>
+        </div>
+        <div class="card-body">
+          <h3>Suika Game</h3>
+          <p class="description">Drop and merge fruits into bigger ones. The viral watermelon game everyone's playing!</p>
+          <div class="card-footer">
+            <span class="tag">Merge</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="color-sort/index.html" class="game-card theme-violet" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🧪</span>
+        </div>
+        <div class="card-body">
+          <h3>Color Sort</h3>
+          <p class="description">Pour colors between tubes to sort them. Satisfying puzzle that's oddly relaxing!</p>
+          <div class="card-footer">
+            <span class="tag">Sort Puzzle</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="stack-tower/index.html" class="game-card theme-coral" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🏗️</span>
+        </div>
+        <div class="card-body">
+          <h3>Stack Tower</h3>
+          <p class="description">Tap to stack blocks perfectly. Miss and they shrink. How high can you build?</p>
+          <div class="card-footer">
+            <span class="tag">Hyper Casual</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="merge-numbers/index.html" class="game-card theme-sky" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🔗</span>
+        </div>
+        <div class="card-body">
+          <h3>Merge Numbers</h3>
+          <p class="description">Drag and drop to merge same numbers. Chain combos for massive scores!</p>
+          <div class="card-footer">
+            <span class="tag">Merge</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="hole-io/index.html" class="game-card theme-slate" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🕳️</span>
+        </div>
+        <div class="card-body">
+          <h3>Hole.io</h3>
+          <p class="description">Control a black hole and swallow everything in sight. Grow bigger, eat the city!</p>
+          <div class="card-footer">
+            <span class="tag">Io Game</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="candy-crush/index.html" class="game-card theme-magenta" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🍬</span>
+        </div>
+        <div class="card-body">
+          <h3>Candy Crush</h3>
+          <p class="description">Swap candies to match 3 or more. Create combos and clear the board in style!</p>
+          <div class="card-footer">
+            <span class="tag">Match-3</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="solitaire/index.html" class="game-card theme-gold" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🃏</span>
+        </div>
+        <div class="card-body">
+          <h3>Solitaire</h3>
+          <p class="description">The timeless card game. Stack cards in order and clear the table to win.</p>
+          <div class="card-footer">
+            <span class="tag">Card</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="knife-hit/index.html" class="game-card theme-mint" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🔪</span>
+        </div>
+        <div class="card-body">
+          <h3>Knife Hit</h3>
+          <p class="description">Throw knives at the spinning log. Don't hit another knife! Perfect your timing.</p>
+          <div class="card-footer">
+            <span class="tag">Hyper Casual</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="lucky-wheel/index.html" class="game-card theme-rainbow" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🎡</span>
+        </div>
+        <div class="card-body">
+          <h3>Lucky Wheel</h3>
+          <p class="description">Spin the wheel and win instant prizes! Every spin is a chance to grab amazing rewards.</p>
+          <div class="card-footer">
+            <span class="tag">Event</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="scratch-card/index.html" class="game-card theme-neon" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🎟️</span>
+        </div>
+        <div class="card-body">
+          <h3>Scratch Card</h3>
+          <p class="description">Scratch to reveal your prize! Match 3 symbols to win. Quick, exciting, and rewarding.</p>
+          <div class="card-footer">
+            <span class="tag">Event</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="gift-box/index.html" class="game-card theme-bronze" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🎁</span>
+        </div>
+        <div class="card-body">
+          <h3>Gift Box</h3>
+          <p class="description">Pick a mystery box and unwrap your surprise! Every box holds a different reward.</p>
+          <div class="card-footer">
+            <span class="tag">Event</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="slot-machine/index.html" class="game-card theme-cherry" data-category="general">
+        <div class="card-thumbnail">
+          <span class="icon">🎰</span>
+        </div>
+        <div class="card-body">
+          <h3>Slot Machine</h3>
+          <p class="description">Pull the lever and match the symbols! Hit the jackpot for the ultimate prize.</p>
+          <div class="card-footer">
+            <span class="tag">Event</span>
+            <span class="play-btn">Play now <span class="arrow">→</span></span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+
+    <footer>
+      Game Center &mdash; Pure HTML/CSS/JS Games
+    </footer>
+  </div>
+
+  <script>
+    // ── Category Filter System ──
+    const tabs = document.querySelectorAll('.filter-tab');
+    const allCards = document.querySelectorAll('.game-card');
+    const sectionEvents = document.getElementById('section-events');
+    const sectionGeneral = document.getElementById('section-general');
+    const gridEvents = document.getElementById('grid-events');
+    const gridGeneral = document.getElementById('grid-general');
+
+    function filterCards(category) {
+      allCards.forEach(card => {
+        const cat = card.dataset.category;
+        if (category === 'all') {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.toggle('hidden', cat !== category);
+        }
+      });
+
+      // Show/hide section labels
+      if (category === 'all') {
+        sectionEvents.classList.remove('hidden');
+        sectionGeneral.classList.remove('hidden');
+      } else if (category === 'general') {
+        sectionEvents.classList.add('hidden');
+        sectionGeneral.classList.remove('hidden');
+      } else {
+        sectionEvents.classList.remove('hidden');
+        sectionGeneral.classList.add('hidden');
+      }
+
+      // Check if event grid is empty
+      const visibleEventCards = gridEvents.querySelectorAll('.game-card:not(.hidden)');
+      gridEvents.style.display = visibleEventCards.length === 0 ? 'none' : '';
+    }
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        filterCards(tab.dataset.filter);
+      });
+    });
+
+    // Update counts dynamically
+    const counts = { all: 0, trungthu: 0, noel: 0, tet: 0, general: 0 };
+    allCards.forEach(card => {
+      const cat = card.dataset.category;
+      counts[cat] = (counts[cat] || 0) + 1;
+      counts.all++;
+    });
+    Object.entries(counts).forEach(([key, val]) => {
+      const el = document.getElementById('count-' + key);
+      if (el) el.textContent = val;
+    });
+  </script>
+</body>
+</html>

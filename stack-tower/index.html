@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Stack Tower</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #0a0a1a;
+    color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #gameContainer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Back Button */
+  #backBtn {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    font-size: 20px;
+  }
+
+  #backBtn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+  }
+
+  #backBtn svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Score HUD */
+  #scoreHUD {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 100;
+    text-align: right;
+  }
+
+  #currentScore {
+    font-size: 48px;
+    font-weight: 800;
+    line-height: 1;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    transition: transform 0.15s ease;
+  }
+
+  #currentScore.bump {
+    transform: scale(1.2);
+  }
+
+  #highScoreDisplay {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  /* Title Screen */
+  #titleScreen {
+    position: absolute;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 10, 26, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: opacity 0.5s ease;
+  }
+
+  #titleScreen.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .titleText {
+    font-size: 52px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #9b59b6);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 4s ease infinite;
+    text-align: center;
+    line-height: 1.1;
+    margin-bottom: 12px;
+  }
+
+  @keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  .subtitleText {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 48px;
+    font-weight: 400;
+  }
+
+  .tapPrompt {
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.7);
+    animation: pulse 2s ease-in-out infinite;
+    font-weight: 500;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.03); }
+  }
+
+  .titleHighScore {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 24px;
+  }
+
+  /* Perfect Text */
+  #perfectText {
+    position: absolute;
+    top: 35%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    z-index: 150;
+    font-size: 42px;
+    font-weight: 900;
+    color: #ffd700;
+    text-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 0 60px rgba(255, 215, 0, 0.4);
+    pointer-events: none;
+    opacity: 0;
+    white-space: nowrap;
+  }
+
+  #perfectText.show {
+    animation: perfectPop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  }
+
+  @keyframes perfectPop {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+    20% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+    40% { transform: translate(-50%, -50%) scale(0.95); opacity: 1; }
+    60% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+  }
+
+  /* Streak Text */
+  #streakText {
+    position: absolute;
+    top: 42%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    z-index: 150;
+    font-size: 22px;
+    font-weight: 700;
+    color: #ffa500;
+    text-shadow: 0 0 20px rgba(255, 165, 0, 0.6);
+    pointer-events: none;
+    opacity: 0;
+    white-space: nowrap;
+  }
+
+  #streakText.show {
+    animation: perfectPop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.1s forwards;
+  }
+
+  /* Game Over */
+  #gameOverScreen {
+    position: absolute;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 10, 26, 0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s ease;
+  }
+
+  #gameOverScreen.show {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .gameOverTitle {
+    font-size: 38px;
+    font-weight: 900;
+    color: #ff6b6b;
+    margin-bottom: 24px;
+    text-shadow: 0 0 30px rgba(255, 107, 107, 0.5);
+  }
+
+  .finalScore {
+    font-size: 64px;
+    font-weight: 900;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #ffd93d, #ff6b6b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .finalLabel {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+  }
+
+  .finalHighScore {
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 8px;
+  }
+
+  .newHighScore {
+    font-size: 16px;
+    color: #ffd700;
+    font-weight: 700;
+    margin-bottom: 48px;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .newHighScore.show {
+    opacity: 1;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .retryPrompt {
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.6);
+    animation: pulse 2s ease-in-out infinite;
+  }
+</style>
+</head>
+<body>
+<div id="gameContainer">
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Back Button -->
+  <a id="backBtn" href="../index.html">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+  </a>
+
+  <!-- Score HUD -->
+  <div id="scoreHUD">
+    <div id="currentScore">0</div>
+    <div id="highScoreDisplay">BEST: 0</div>
+  </div>
+
+  <!-- Perfect Text -->
+  <div id="perfectText">PERFECT!</div>
+  <div id="streakText"></div>
+
+  <!-- Title Screen -->
+  <div id="titleScreen">
+    <div class="titleText">Stack<br>Tower</div>
+    <div class="subtitleText">Stack them up!</div>
+    <div class="tapPrompt">Tap to Start</div>
+    <div class="titleHighScore" id="titleHighScore"></div>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div id="gameOverScreen">
+    <div class="gameOverTitle">GAME OVER</div>
+    <div class="finalLabel">SCORE</div>
+    <div class="finalScore" id="finalScore">0</div>
+    <div class="finalHighScore" id="finalHighScore">BEST: 0</div>
+    <div class="newHighScore" id="newHighScore">NEW HIGH SCORE!</div>
+    <div class="retryPrompt">Tap to Retry</div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// SCORING CONFIG - EASY TO CUSTOMIZE
+// ============================================================
+const SCORING = {
+  normalPoints: 1,
+  perfectPoints: 3,
+  perfectStreakBonus: 2,
+  speedIncreasePerLevel: 0.15,
+  initialSpeed: 2,
+  maxSpeed: 8,
+};
+
+// ============================================================
+// GAME CONSTANTS
+// ============================================================
+const PERFECT_TOLERANCE = 5;
+const BLOCK_HEIGHT = 28;
+const INITIAL_BLOCK_WIDTH = 200;
+const BASE_BLOCK_Y_START = 0;
+const CAMERA_LERP = 0.08;
+const BG_COLOR = '#0a0a1a';
+const PARTICLE_COUNT = 40;
+const CUT_PIECE_GRAVITY = 0.4;
+const CUT_PIECE_ROTATION_SPEED = 0.05;
+
+// ============================================================
+// DOM ELEMENTS
+// ============================================================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('currentScore');
+const highScoreEl = document.getElementById('highScoreDisplay');
+const titleScreen = document.getElementById('titleScreen');
+const titleHighScoreEl = document.getElementById('titleHighScore');
+const perfectTextEl = document.getElementById('perfectText');
+const streakTextEl = document.getElementById('streakText');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const finalScoreEl = document.getElementById('finalScore');
+const finalHighScoreEl = document.getElementById('finalHighScore');
+const newHighScoreEl = document.getElementById('newHighScore');
+
+// ============================================================
+// GAME STATE
+// ============================================================
+let W, H;
+let dpr;
+let gameState = 'title'; // title, playing, gameover
+let score = 0;
+let highScore = 0;
+let perfectStreak = 0;
+let level = 0;
+
+// Tower: array of placed blocks {x, y, width}
+let tower = [];
+// Current moving block
+let currentBlock = null;
+// Cut pieces (falling animation)
+let cutPieces = [];
+// Camera offset
+let cameraY = 0;
+let targetCameraY = 0;
+// Background particles
+let bgParticles = [];
+// Perfect flash effects
+let flashEffects = [];
+// Score pop effects
+let scorePops = [];
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+function init() {
+  resizeCanvas();
+  loadHighScore();
+  updateHighScoreDisplay();
+  createBgParticles();
+  requestAnimationFrame(gameLoop);
+}
+
+function resizeCanvas() {
+  dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+window.addEventListener('resize', resizeCanvas);
+
+function loadHighScore() {
+  try {
+    const saved = localStorage.getItem('stackTower_highScore');
+    if (saved) highScore = parseInt(saved, 10) || 0;
+  } catch (e) {}
+}
+
+function saveHighScore() {
+  try {
+    localStorage.setItem('stackTower_highScore', highScore.toString());
+  } catch (e) {}
+}
+
+function updateHighScoreDisplay() {
+  highScoreEl.textContent = 'BEST: ' + highScore;
+  titleHighScoreEl.textContent = highScore > 0 ? ('High Score: ' + highScore) : '';
+}
+
+// ============================================================
+// COLOR SYSTEM - Rainbow gradient progression
+// ============================================================
+function getBlockColor(index) {
+  const hue = (index * 25 + 10) % 360;
+  return {
+    h: hue,
+    s: 75,
+    l: 55,
+  };
+}
+
+function blockGradient(x, y, width, height, colorIndex) {
+  const c = getBlockColor(colorIndex);
+  const grad = ctx.createLinearGradient(x, y, x + width, y + height);
+  grad.addColorStop(0, `hsl(${c.h}, ${c.s}%, ${c.l + 10}%)`);
+  grad.addColorStop(1, `hsl(${(c.h + 20) % 360}, ${c.s}%, ${c.l - 5}%)`);
+  return grad;
+}
+
+// ============================================================
+// BACKGROUND PARTICLES
+// ============================================================
+function createBgParticles() {
+  bgParticles = [];
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    bgParticles.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      size: Math.random() * 2 + 0.5,
+      speedY: -(Math.random() * 0.3 + 0.1),
+      speedX: (Math.random() - 0.5) * 0.2,
+      alpha: Math.random() * 0.3 + 0.05,
+    });
+  }
+}
+
+function updateBgParticles() {
+  for (const p of bgParticles) {
+    p.x += p.speedX;
+    p.y += p.speedY;
+    if (p.y < -5) { p.y = H + 5; p.x = Math.random() * W; }
+    if (p.x < -5) p.x = W + 5;
+    if (p.x > W + 5) p.x = -5;
+  }
+}
+
+function drawBgParticles() {
+  for (const p of bgParticles) {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
+    ctx.fill();
+  }
+}
+
+// ============================================================
+// SUBTLE GRID BACKGROUND
+// ============================================================
+function drawGrid() {
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.025)';
+  ctx.lineWidth = 1;
+  const gridSize = 40;
+  const offsetY = (cameraY * 0.1) % gridSize;
+  for (let x = 0; x <= W; x += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+  for (let y = -gridSize + offsetY; y <= H + gridSize; y += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
+}
+
+// ============================================================
+// GAME START / RESET
+// ============================================================
+function startGame() {
+  score = 0;
+  level = 0;
+  perfectStreak = 0;
+  tower = [];
+  cutPieces = [];
+  flashEffects = [];
+  scorePops = [];
+  cameraY = 0;
+  targetCameraY = 0;
+
+  scoreEl.textContent = '0';
+  updateHighScoreDisplay();
+
+  // Place base block (centered)
+  const baseX = (W - INITIAL_BLOCK_WIDTH) / 2;
+  const baseY = H - BLOCK_HEIGHT - 60;
+  tower.push({
+    x: baseX,
+    y: baseY,
+    width: INITIAL_BLOCK_WIDTH,
+    colorIndex: 0,
+  });
+
+  level = 1;
+  spawnNewBlock();
+  gameState = 'playing';
+  titleScreen.classList.add('hidden');
+  gameOverScreen.classList.remove('show');
+}
+
+function spawnNewBlock() {
+  const prev = tower[tower.length - 1];
+  const y = prev.y - BLOCK_HEIGHT;
+  const speed = Math.min(SCORING.maxSpeed, SCORING.initialSpeed + level * SCORING.speedIncreasePerLevel);
+  const direction = level % 2 === 1 ? 1 : -1;
+  const startX = direction === 1 ? -prev.width : W;
+
+  currentBlock = {
+    x: startX,
+    y: y,
+    width: prev.width,
+    speed: speed,
+    direction: direction,
+    colorIndex: level,
+  };
+
+  // Update camera target
+  const blockScreenY = y - cameraY;
+  if (blockScreenY < H * 0.4) {
+    targetCameraY = y - H * 0.4;
+  }
+}
+
+// ============================================================
+// PLACE BLOCK LOGIC
+// ============================================================
+function placeBlock() {
+  if (!currentBlock || gameState !== 'playing') return;
+
+  const prev = tower[tower.length - 1];
+  const curr = currentBlock;
+
+  // Calculate overlap
+  const overlapStart = Math.max(curr.x, prev.x);
+  const overlapEnd = Math.min(curr.x + curr.width, prev.x + prev.width);
+  const overlapWidth = overlapEnd - overlapStart;
+
+  if (overlapWidth <= 0) {
+    // Missed entirely - game over
+    // Make current block a falling cut piece
+    cutPieces.push({
+      x: curr.x,
+      y: curr.y,
+      width: curr.width,
+      height: BLOCK_HEIGHT,
+      colorIndex: curr.colorIndex,
+      velocityX: curr.direction * 2,
+      velocityY: 0,
+      rotation: 0,
+      rotationSpeed: curr.direction * CUT_PIECE_ROTATION_SPEED,
+      alpha: 1,
+    });
+    currentBlock = null;
+    gameOver();
+    return;
+  }
+
+  // Check for perfect placement
+  const offset = Math.abs(curr.x - prev.x);
+  const isPerfect = offset <= PERFECT_TOLERANCE;
+
+  let placedWidth, placedX;
+
+  if (isPerfect) {
+    // Perfect placement - keep full previous width, align
+    placedWidth = prev.width;
+    placedX = prev.x;
+    perfectStreak++;
+
+    // Score
+    const bonus = SCORING.perfectPoints + (perfectStreak > 1 ? (perfectStreak - 1) * SCORING.perfectStreakBonus : 0);
+    score += bonus;
+
+    // Show perfect text
+    showPerfectText();
+    if (perfectStreak > 1) {
+      showStreakText(perfectStreak);
+    }
+
+    // Flash effect
+    flashEffects.push({
+      x: placedX,
+      y: curr.y,
+      width: placedWidth,
+      alpha: 1,
+    });
+
+    // Score pop
+    scorePops.push({
+      x: W / 2,
+      y: curr.y - cameraY - 10,
+      text: '+' + bonus,
+      alpha: 1,
+      scale: 1.5,
+      vy: -1.5,
+    });
+  } else {
+    // Normal placement - cut overhang
+    placedWidth = overlapWidth;
+    placedX = overlapStart;
+    perfectStreak = 0;
+    score += SCORING.normalPoints;
+
+    // Create cut piece
+    let cutX, cutW;
+    if (curr.x < prev.x) {
+      // Overhang on left
+      cutX = curr.x;
+      cutW = prev.x - curr.x;
+    } else {
+      // Overhang on right
+      cutX = overlapEnd;
+      cutW = (curr.x + curr.width) - overlapEnd;
+    }
+
+    if (cutW > 0) {
+      const fallDir = cutX < placedX ? -1 : 1;
+      cutPieces.push({
+        x: cutX,
+        y: curr.y,
+        width: cutW,
+        height: BLOCK_HEIGHT,
+        colorIndex: curr.colorIndex,
+        velocityX: fallDir * (1 + Math.random()),
+        velocityY: 0,
+        rotation: 0,
+        rotationSpeed: fallDir * CUT_PIECE_ROTATION_SPEED * (0.5 + Math.random()),
+        alpha: 1,
+      });
+    }
+
+    // Score pop
+    scorePops.push({
+      x: W / 2,
+      y: curr.y - cameraY - 10,
+      text: '+' + SCORING.normalPoints,
+      alpha: 1,
+      scale: 1,
+      vy: -1.5,
+    });
+  }
+
+  // Add placed block to tower
+  tower.push({
+    x: placedX,
+    y: curr.y,
+    width: placedWidth,
+    colorIndex: curr.colorIndex,
+  });
+
+  // Update score display
+  scoreEl.textContent = score;
+  scoreEl.classList.add('bump');
+  setTimeout(() => scoreEl.classList.remove('bump'), 150);
+
+  // Check if block is too narrow
+  if (placedWidth < 2) {
+    currentBlock = null;
+    gameOver();
+    return;
+  }
+
+  level++;
+  spawnNewBlock();
+}
+
+// ============================================================
+// GAME OVER
+// ============================================================
+function gameOver() {
+  gameState = 'gameover';
+  currentBlock = null;
+
+  const isNewHigh = score > highScore;
+  if (isNewHigh) {
+    highScore = score;
+    saveHighScore();
+  }
+
+  // Delay showing game over screen
+  setTimeout(() => {
+    finalScoreEl.textContent = score;
+    finalHighScoreEl.textContent = 'BEST: ' + highScore;
+    if (isNewHigh && score > 0) {
+      newHighScoreEl.classList.add('show');
+    } else {
+      newHighScoreEl.classList.remove('show');
+    }
+    gameOverScreen.classList.add('show');
+  }, 600);
+}
+
+// ============================================================
+// PERFECT TEXT EFFECTS
+// ============================================================
+function showPerfectText() {
+  perfectTextEl.classList.remove('show');
+  void perfectTextEl.offsetWidth; // trigger reflow
+  perfectTextEl.classList.add('show');
+  setTimeout(() => perfectTextEl.classList.remove('show'), 900);
+}
+
+function showStreakText(streak) {
+  streakTextEl.textContent = streak + 'x COMBO!';
+  streakTextEl.classList.remove('show');
+  void streakTextEl.offsetWidth;
+  streakTextEl.classList.add('show');
+  setTimeout(() => streakTextEl.classList.remove('show'), 900);
+}
+
+// ============================================================
+// UPDATE
+// ============================================================
+function update() {
+  // Camera lerp
+  cameraY += (targetCameraY - cameraY) * CAMERA_LERP;
+
+  // Update moving block
+  if (currentBlock && gameState === 'playing') {
+    currentBlock.x += currentBlock.speed * currentBlock.direction;
+
+    // Bounce at edges
+    const prev = tower[tower.length - 1];
+    const margin = prev.width * 0.6;
+    if (currentBlock.direction === 1 && currentBlock.x > W - currentBlock.width + margin) {
+      currentBlock.direction = -1;
+    } else if (currentBlock.direction === -1 && currentBlock.x < -margin) {
+      currentBlock.direction = 1;
+    }
+  }
+
+  // Update cut pieces
+  for (let i = cutPieces.length - 1; i >= 0; i--) {
+    const cp = cutPieces[i];
+    cp.velocityY += CUT_PIECE_GRAVITY;
+    cp.x += cp.velocityX;
+    cp.y += cp.velocityY;
+    cp.rotation += cp.rotationSpeed;
+    cp.alpha -= 0.012;
+    if (cp.alpha <= 0 || cp.y - cameraY > H + 100) {
+      cutPieces.splice(i, 1);
+    }
+  }
+
+  // Update flash effects
+  for (let i = flashEffects.length - 1; i >= 0; i--) {
+    flashEffects[i].alpha -= 0.04;
+    if (flashEffects[i].alpha <= 0) {
+      flashEffects.splice(i, 1);
+    }
+  }
+
+  // Update score pops
+  for (let i = scorePops.length - 1; i >= 0; i--) {
+    const sp = scorePops[i];
+    sp.y += sp.vy;
+    sp.alpha -= 0.02;
+    sp.scale *= 0.995;
+    if (sp.alpha <= 0) {
+      scorePops.splice(i, 1);
+    }
+  }
+
+  // Update background particles
+  updateBgParticles();
+}
+
+// ============================================================
+// DRAW
+// ============================================================
+function draw() {
+  // Clear
+  ctx.fillStyle = BG_COLOR;
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw grid
+  drawGrid();
+
+  // Draw particles
+  drawBgParticles();
+
+  // Camera transform
+  ctx.save();
+  ctx.translate(0, -cameraY);
+
+  // Draw tower blocks
+  for (let i = 0; i < tower.length; i++) {
+    const block = tower[i];
+    const screenY = block.y - cameraY;
+    if (screenY > H + BLOCK_HEIGHT || screenY < -BLOCK_HEIGHT * 3) continue;
+    drawBlock(block.x, block.y, block.width, BLOCK_HEIGHT, block.colorIndex, false);
+  }
+
+  // Draw flash effects (perfect placement glow)
+  for (const f of flashEffects) {
+    ctx.save();
+    ctx.globalAlpha = f.alpha * 0.6;
+    ctx.shadowColor = '#ffd700';
+    ctx.shadowBlur = 30 * f.alpha;
+    ctx.fillStyle = `rgba(255, 215, 0, ${f.alpha * 0.5})`;
+    ctx.fillRect(f.x - 4, f.y - 4, f.width + 8, BLOCK_HEIGHT + 8);
+    ctx.restore();
+  }
+
+  // Draw cut pieces
+  for (const cp of cutPieces) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, cp.alpha);
+    ctx.translate(cp.x + cp.width / 2, cp.y + cp.height / 2);
+    ctx.rotate(cp.rotation);
+    drawBlock(-cp.width / 2, -cp.height / 2, cp.width, cp.height, cp.colorIndex, false);
+    ctx.restore();
+  }
+
+  // Draw current moving block
+  if (currentBlock && gameState === 'playing') {
+    drawBlock(currentBlock.x, currentBlock.y, currentBlock.width, BLOCK_HEIGHT, currentBlock.colorIndex, true);
+  }
+
+  ctx.restore();
+
+  // Draw score pops (screen space)
+  for (const sp of scorePops) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, sp.alpha);
+    ctx.font = `bold ${Math.round(20 * sp.scale)}px 'Segoe UI', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffd700';
+    ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
+    ctx.shadowBlur = 10;
+    ctx.fillText(sp.text, sp.x, sp.y);
+    ctx.restore();
+  }
+}
+
+function drawBlock(x, y, width, height, colorIndex, isMoving) {
+  // Main block gradient
+  const grad = blockGradient(x, y, width, height, colorIndex);
+
+  if (isMoving) {
+    ctx.save();
+    ctx.shadowColor = `hsla(${getBlockColor(colorIndex).h}, 80%, 60%, 0.6)`;
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 4;
+  }
+
+  // Block body
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  roundRect(ctx, x, y, width, height, 3);
+  ctx.fill();
+
+  // Highlight on top edge
+  const hlGrad = ctx.createLinearGradient(x, y, x, y + height * 0.4);
+  hlGrad.addColorStop(0, 'rgba(255, 255, 255, 0.25)');
+  hlGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = hlGrad;
+  ctx.beginPath();
+  roundRect(ctx, x, y, width, height * 0.4, 3);
+  ctx.fill();
+
+  // Subtle border
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  roundRect(ctx, x, y, width, height, 3);
+  ctx.stroke();
+
+  if (isMoving) {
+    ctx.restore();
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  if (w < 2 * r) r = w / 2;
+  if (h < 2 * r) r = h / 2;
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+// ============================================================
+// GAME LOOP
+// ============================================================
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+// INPUT HANDLING
+// ============================================================
+function handleTap(e) {
+  // Don't handle if clicking back button
+  if (e.target.closest('#backBtn')) return;
+
+  if (gameState === 'title') {
+    startGame();
+  } else if (gameState === 'playing') {
+    placeBlock();
+  } else if (gameState === 'gameover') {
+    // Small delay so we don't accidentally restart
+    if (gameOverScreen.classList.contains('show')) {
+      gameOverScreen.classList.remove('show');
+      newHighScoreEl.classList.remove('show');
+      setTimeout(() => startGame(), 100);
+    }
+  }
+}
+
+canvas.addEventListener('pointerdown', handleTap);
+gameOverScreen.addEventListener('pointerdown', handleTap);
+titleScreen.addEventListener('pointerdown', handleTap);
+
+// Keyboard support
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || e.code === 'Enter') {
+    e.preventDefault();
+    handleTap({ target: document.body });
+  }
+});
+
+// Prevent double-tap zoom
+document.addEventListener('dblclick', (e) => e.preventDefault());
+
+// Prevent context menu on long press
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// ============================================================
+// START
+// ============================================================
+init();
+</script>
+</body>
+</html>

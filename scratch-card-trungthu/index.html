@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mid-Autumn Scratch Card 🎑</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: #0a0a1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    font-family: 'Segoe UI', sans-serif;
+    overflow-x: hidden;
+    position: relative;
+    padding-bottom: 40px;
+  }
+
+  /* Atmosphere */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255,140,0,0.18) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 40% at 80% 20%, rgba(255,80,0,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 60% at 20% 80%, rgba(180,80,0,0.10) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Floating lanterns */
+  .lantern {
+    position: fixed;
+    font-size: 28px;
+    animation: lanternUp linear infinite;
+    z-index: 0;
+    pointer-events: none;
+    filter: drop-shadow(0 0 8px rgba(255,140,0,0.6));
+    opacity: 0;
+  }
+
+  @keyframes lanternUp {
+    0% { transform: translateY(110vh) rotate(0deg); opacity: 0; }
+    5% { opacity: 1; }
+    95% { opacity: 0.6; }
+    100% { transform: translateY(-10vh) rotate(5deg); opacity: 0; }
+  }
+
+  /* Moon fixed top-right */
+  .moon-deco {
+    position: fixed;
+    top: 20px;
+    right: 50px;
+    font-size: 70px;
+    filter: drop-shadow(0 0 25px rgba(255,200,50,0.5));
+    animation: moonGlow 4s ease-in-out infinite;
+    z-index: 0;
+    pointer-events: none;
+  }
+  @keyframes moonGlow {
+    0%, 100% { filter: drop-shadow(0 0 25px rgba(255,200,50,0.5)); }
+    50% { filter: drop-shadow(0 0 40px rgba(255,200,50,0.9)); }
+  }
+
+  .back-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s;
+  }
+  .back-btn:hover { background: rgba(255,255,255,0.2); transform: translateX(-3px); }
+
+  .game-container {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+    padding: 100px 20px 40px;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .title {
+    text-align: center;
+    color: #fff;
+  }
+  .title h1 {
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-weight: 800;
+    background: linear-gradient(135deg, #ff8c00, #ffd700, #ff4500, #ff8c00);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 3s linear infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+  }
+  .title p { color: rgba(255,200,100,0.7); font-size: 0.95rem; margin-top: 6px; }
+
+  /* Scratch cards row */
+  .cards-row {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .scratch-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .scratch-label {
+    color: rgba(255,200,100,0.6);
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .card-wrap {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow:
+      0 0 20px rgba(255,140,0,0.3),
+      0 8px 30px rgba(0,0,0,0.5);
+    cursor: crosshair;
+  }
+
+  /* Prize layer (underneath) */
+  .prize-layer {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1a0a00, #2d1500);
+    border-radius: 16px;
+    gap: 6px;
+    z-index: 1;
+  }
+
+  .prize-layer .p-emoji { font-size: 44px; }
+  .prize-layer .p-name {
+    font-size: 0.65rem;
+    color: rgba(255,200,100,0.8);
+    text-align: center;
+    padding: 0 8px;
+    font-weight: 600;
+  }
+
+  /* Scratch surface canvas */
+  .scratch-canvas {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: 16px;
+    touch-action: none;
+  }
+
+  /* Revealed overlay */
+  .revealed-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: #ffd700;
+    color: #000;
+    font-size: 0.55rem;
+    font-weight: 700;
+    padding: 3px 7px;
+    border-radius: 10px;
+    z-index: 10;
+    display: none;
+    letter-spacing: 0.5px;
+  }
+  .card-wrap.done .revealed-badge { display: block; }
+
+  /* Hint text */
+  .hint-text {
+    text-align: center;
+    color: rgba(255,200,100,0.5);
+    font-size: 0.8rem;
+    animation: blink 2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:0.5} 50%{opacity:1} }
+
+  /* Result bar */
+  .result-bar {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,140,0,0.2);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    display: none;
+  }
+  .result-bar.show { display: block; }
+  .result-bar .r-emoji { font-size: 50px; margin-bottom: 10px; }
+  .result-bar h3 { color: #ffd700; font-size: 1.2rem; margin-bottom: 6px; }
+  .result-bar p { color: rgba(255,200,100,0.7); font-size: 0.9rem; }
+
+  /* Win / lose styling */
+  .result-bar.win {
+    background: rgba(255,140,0,0.1);
+    border-color: rgba(255,215,0,0.5);
+    box-shadow: 0 0 20px rgba(255,140,0,0.2);
+  }
+  .result-bar.lose {
+    background: rgba(255,255,255,0.03);
+    border-color: rgba(255,255,255,0.1);
+  }
+
+  /* Buttons */
+  .action-btns {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .btn-play {
+    padding: 14px 40px;
+    background: linear-gradient(135deg, #ff8c00, #ffd700, #ff4500);
+    background-size: 200% 200%;
+    border: none;
+    border-radius: 40px;
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    animation: shimmer 3s linear infinite;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    box-shadow: 0 0 20px rgba(255,140,0,0.4);
+  }
+  .btn-play:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 0 35px rgba(255,140,0,0.7); }
+  .btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-home {
+    padding: 14px 28px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 40px;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s;
+  }
+  .btn-home:hover { background: rgba(255,255,255,0.15); }
+
+  /* Stats */
+  .stats-row {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .stat-chip {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,140,0,0.2);
+    border-radius: 12px;
+    padding: 10px 18px;
+    text-align: center;
+    min-width: 90px;
+  }
+  .stat-chip .s-num { font-size: 1.4rem; font-weight: 700; color: #ffd700; }
+  .stat-chip .s-label { font-size: 0.7rem; color: rgba(255,200,100,0.5); }
+
+  /* Prize table */
+  .prize-table {
+    width: 100%;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,140,0,0.15);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .prize-table h3 {
+    color: rgba(255,200,100,0.6);
+    font-size: 0.8rem;
+    text-align: center;
+    margin-bottom: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .prize-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+  .prize-cell {
+    text-align: center;
+    padding: 8px 4px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px;
+    border: 1px solid rgba(255,140,0,0.1);
+  }
+  .prize-cell .pc-emoji { font-size: 20px; }
+  .prize-cell .pc-name { font-size: 0.55rem; color: rgba(255,200,100,0.6); margin-top: 3px; }
+
+  /* Confetti */
+  #confetti-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 150;
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-btn">← Back</a>
+<canvas id="confetti-canvas"></canvas>
+<div class="moon-deco">🌕</div>
+
+<!-- Lanterns -->
+<div class="lantern" style="left:8%;animation-duration:9s;animation-delay:0s;">🏮</div>
+<div class="lantern" style="left:20%;animation-duration:11s;animation-delay:2s;">🏮</div>
+<div class="lantern" style="left:70%;animation-duration:8s;animation-delay:1s;">🏮</div>
+<div class="lantern" style="left:85%;animation-duration:13s;animation-delay:3s;">🏮</div>
+<div class="lantern" style="left:50%;animation-duration:10s;animation-delay:5s;">🌟</div>
+
+<div class="game-container">
+  <div class="title">
+    <h1>🎑 Mid-Autumn Scratch Card</h1>
+    <p>Scratch to reveal your Mid-Autumn prize!</p>
+  </div>
+
+  <div class="hint-text">SCRATCH 🌕 to reveal your prize</div>
+
+  <div class="cards-row" id="cardsRow">
+    <div class="scratch-slot">
+      <div class="scratch-label">Slot 1</div>
+      <div class="card-wrap" id="card0">
+        <div class="prize-layer" id="prize0">
+          <div class="p-emoji">🥮</div>
+          <div class="p-name">...</div>
+        </div>
+        <canvas class="scratch-canvas" id="canvas0"></canvas>
+        <div class="revealed-badge">✓ REVEALED</div>
+      </div>
+    </div>
+    <div class="scratch-slot">
+      <div class="scratch-label">Slot 2</div>
+      <div class="card-wrap" id="card1">
+        <div class="prize-layer" id="prize1">
+          <div class="p-emoji">🏮</div>
+          <div class="p-name">...</div>
+        </div>
+        <canvas class="scratch-canvas" id="canvas1"></canvas>
+        <div class="revealed-badge">✓ REVEALED</div>
+      </div>
+    </div>
+    <div class="scratch-slot">
+      <div class="scratch-label">Slot 3</div>
+      <div class="card-wrap" id="card2">
+        <div class="prize-layer" id="prize2">
+          <div class="p-emoji">🌕</div>
+          <div class="p-name">...</div>
+        </div>
+        <canvas class="scratch-canvas" id="canvas2"></canvas>
+        <div class="revealed-badge">✓ REVEALED</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="result-bar" id="resultBar">
+    <div class="r-emoji" id="resultEmoji">🎑</div>
+    <h3 id="resultTitle">Result</h3>
+    <p id="resultDesc">Scratch all 3 slots to see your result!</p>
+  </div>
+
+  <div class="action-btns">
+    <button class="btn-play" id="playBtn" onclick="startGame()">🥮 Start Scratching</button>
+    <a href="../index.html" class="btn-home">🏠 Home</a>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-chip"><div class="s-num" id="playCount">0</div><div class="s-label">Plays</div></div>
+    <div class="stat-chip"><div class="s-num" id="winTotal">0</div><div class="s-label">Prizes Won</div></div>
+    <div class="stat-chip"><div class="s-num" id="jackpotTotal">0</div><div class="s-label">Jackpot</div></div>
+  </div>
+
+  <div class="prize-table">
+    <h3>Prizes</h3>
+    <div class="prize-grid">
+      <div class="prize-cell"><div class="pc-emoji">🎑</div><div class="pc-name">Jackpot!</div></div>
+      <div class="prize-cell"><div class="pc-emoji">🏮</div><div class="pc-name">Voucher 200k</div></div>
+      <div class="prize-cell"><div class="pc-emoji">🥮</div><div class="pc-name">Mooncake Box</div></div>
+      <div class="prize-cell"><div class="pc-emoji">⭐</div><div class="pc-name">200 Points</div></div>
+      <div class="prize-cell"><div class="pc-emoji">🌕</div><div class="pc-name">100 Points</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const PRIZES = [
+    { emoji: '🎑', name: 'Mid-Autumn Jackpot!', desc: 'Congratulations! You won the grand Mid-Autumn prize!', isJackpot: true, isWin: true, weight: 2 },
+    { emoji: '🏮', name: 'Voucher 200k', desc: 'Amazing! A 200,000 VND voucher is yours!', isJackpot: false, isWin: true, weight: 8 },
+    { emoji: '🥮', name: 'Mooncake Box', desc: 'Delicious! A special Mid-Autumn mooncake box!', isJackpot: false, isWin: true, weight: 12 },
+    { emoji: '⭐', name: '200 Bonus Points', desc: 'You earned 200 bonus points!', isJackpot: false, isWin: true, weight: 20 },
+    { emoji: '🌕', name: '100 Bonus Points', desc: 'You earned 100 bonus points!', isJackpot: false, isWin: true, weight: 25 },
+    { emoji: '🌟', name: 'Better Luck Next Time', desc: 'The full moon will smile on you next time!', isJackpot: false, isWin: false, weight: 33 },
+  ];
+
+  const MOONCAKE_COLORS = ['#ff8c00','#ffd700','#ff4500','#d4720e','#ffaa00','#ff6600','#e87b00'];
+  let gameActive = false;
+  let cardPrizes = [];
+  let revealedCount = 0;
+  let playCount = 0, winTotal = 0, jackpotTotal = 0;
+
+  // Scratch state for each card
+  const scratchStates = [
+    { isDrawing: false, listeners: [] },
+    { isDrawing: false, listeners: [] },
+    { isDrawing: false, listeners: [] }
+  ];
+
+  function weightedRandom(prizes) {
+    const total = prizes.reduce((s, p) => s + p.weight, 0);
+    let r = Math.random() * total;
+    for (const p of prizes) {
+      r -= p.weight;
+      if (r <= 0) return p;
+    }
+    return prizes[prizes.length - 1];
+  }
+
+  function drawScratchSurface(canvas) {
+    const ctx = canvas.getContext('2d');
+    canvas.width = 150;
+    canvas.height = 150;
+
+    // Amber/orange scratch surface with moon pattern
+    const grad = ctx.createLinearGradient(0, 0, 150, 150);
+    grad.addColorStop(0, '#7a3800');
+    grad.addColorStop(0.5, '#b85400');
+    grad.addColorStop(1, '#5a2500');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 150, 150);
+
+    // Moon dot pattern
+    ctx.fillStyle = 'rgba(255,200,50,0.12)';
+    for (let i = 0; i < 20; i++) {
+      const x = Math.random() * 150;
+      const y = Math.random() * 150;
+      const r = Math.random() * 15 + 5;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Lantern icons
+    ctx.font = '22px serif';
+    ctx.globalAlpha = 0.2;
+    const icons = ['🏮','🌕','🥮','⭐'];
+    for (let i = 0; i < 6; i++) {
+      ctx.fillText(icons[i % icons.length], Math.random() * 110 + 10, Math.random() * 110 + 25);
+    }
+    ctx.globalAlpha = 1;
+
+    // Central hint text
+    ctx.fillStyle = 'rgba(255,220,100,0.7)';
+    ctx.font = 'bold 14px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.fillText('SCRATCH 🌕', 75, 75);
+    ctx.font = '11px Segoe UI';
+    ctx.fillStyle = 'rgba(255,200,80,0.5)';
+    ctx.fillText('to reveal prize', 75, 92);
+  }
+
+  function setupScratch(index) {
+    const cardEl = document.getElementById(`card${index}`);
+    const canvas = document.getElementById(`canvas${index}`);
+    const state = scratchStates[index];
+
+    // Clone canvas to remove old listeners
+    const newCanvas = canvas.cloneNode(true);
+    canvas.parentNode.replaceChild(newCanvas, canvas);
+    newCanvas.id = `canvas${index}`;
+
+    drawScratchSurface(newCanvas);
+
+    const ctx = newCanvas.getContext('2d');
+    ctx.globalCompositeOperation = 'destination-out';
+
+    let painting = false;
+
+    function getPos(e) {
+      const rect = newCanvas.getBoundingClientRect();
+      const scaleX = newCanvas.width / rect.width;
+      const scaleY = newCanvas.height / rect.height;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+      };
+    }
+
+    function scratch(e) {
+      if (!painting || !gameActive) return;
+      e.preventDefault();
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, 22, 0, Math.PI * 2);
+      ctx.fill();
+      checkReveal(index, newCanvas, cardEl);
+    }
+
+    newCanvas.addEventListener('mousedown', (e) => { painting = true; scratch(e); });
+    newCanvas.addEventListener('mousemove', scratch);
+    newCanvas.addEventListener('mouseup', () => { painting = false; });
+    newCanvas.addEventListener('mouseleave', () => { painting = false; });
+    newCanvas.addEventListener('touchstart', (e) => { painting = true; scratch(e); }, { passive: false });
+    newCanvas.addEventListener('touchmove', scratch, { passive: false });
+    newCanvas.addEventListener('touchend', () => { painting = false; });
+  }
+
+  function checkReveal(index, canvas, cardEl) {
+    if (cardEl.classList.contains('done')) return;
+
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+    let transparent = 0;
+    for (let i = 3; i < pixels.length; i += 4) {
+      if (pixels[i] < 128) transparent++;
+    }
+    const pct = transparent / (canvas.width * canvas.height);
+
+    if (pct > 0.55) {
+      cardEl.classList.add('done');
+      // Fully clear canvas
+      const ctx2 = canvas.getContext('2d');
+      ctx2.clearRect(0, 0, canvas.width, canvas.height);
+      revealedCount++;
+      if (revealedCount === 3) {
+        setTimeout(showResult, 400);
+      }
+    }
+  }
+
+  function startGame() {
+    if (gameActive) return;
+    gameActive = true;
+    revealedCount = 0;
+    playCount++;
+    document.getElementById('playCount').textContent = playCount;
+
+    const btn = document.getElementById('playBtn');
+    btn.disabled = true;
+    btn.textContent = '🌕 Scratching...';
+
+    document.getElementById('resultBar').classList.remove('show', 'win', 'lose');
+
+    // Generate 3 prizes
+    cardPrizes = [weightedRandom(PRIZES), weightedRandom(PRIZES), weightedRandom(PRIZES)];
+
+    // Set prize layers
+    for (let i = 0; i < 3; i++) {
+      const cardEl = document.getElementById(`card${i}`);
+      cardEl.classList.remove('done');
+      const prizeEl = document.getElementById(`prize${i}`);
+      prizeEl.querySelector('.p-emoji').textContent = cardPrizes[i].emoji;
+      prizeEl.querySelector('.p-name').textContent = cardPrizes[i].name;
+      setupScratch(i);
+    }
+  }
+
+  function showResult() {
+    gameActive = false;
+
+    // Determine result: 3 matching symbols = jackpot, at least 2 matching wins = win
+    const emojis = cardPrizes.map(p => p.emoji);
+    const jackpot = emojis[0] === emojis[1] && emojis[1] === emojis[2] && cardPrizes[0].isJackpot;
+    const allMatch = emojis[0] === emojis[1] && emojis[1] === emojis[2];
+    const twoMatch = emojis[0] === emojis[1] || emojis[1] === emojis[2] || emojis[0] === emojis[2];
+    const anyWin = cardPrizes.some(p => p.isWin);
+
+    const resultBar = document.getElementById('resultBar');
+    const btn = document.getElementById('playBtn');
+
+    if (jackpot || allMatch) {
+      // All 3 match - big win
+      jackpotTotal++;
+      winTotal++;
+      document.getElementById('jackpotTotal').textContent = jackpotTotal;
+      document.getElementById('winTotal').textContent = winTotal;
+
+      resultBar.classList.add('show', 'win');
+      document.getElementById('resultEmoji').textContent = cardPrizes[0].emoji;
+      document.getElementById('resultTitle').textContent = allMatch ? '🎉 ' + cardPrizes[0].name : '🌕 Mid-Autumn Jackpot!';
+      document.getElementById('resultDesc').textContent = allMatch ? 'All three slots match! ' + cardPrizes[0].desc : 'Incredible! All three slots match!';
+
+      launchConfetti(allMatch ? 120 : 60);
+    } else if (twoMatch && anyWin) {
+      // 2 match - win
+      winTotal++;
+      document.getElementById('winTotal').textContent = winTotal;
+
+      const matchPrize = emojis[0] === emojis[1] ? cardPrizes[0] : (emojis[1] === emojis[2] ? cardPrizes[1] : cardPrizes[0]);
+      resultBar.classList.add('show', 'win');
+      document.getElementById('resultEmoji').textContent = matchPrize.emoji;
+      document.getElementById('resultTitle').textContent = '🌟 ' + matchPrize.name;
+      document.getElementById('resultDesc').textContent = 'Two slots match! ' + matchPrize.desc;
+      launchConfetti(50);
+    } else {
+      // No match - lose
+      resultBar.classList.add('show', 'lose');
+      document.getElementById('resultEmoji').textContent = '🌕';
+      document.getElementById('resultTitle').textContent = 'Better Luck Next Time';
+      document.getElementById('resultDesc').textContent = 'The full moon will smile on you! Give it another try!';
+    }
+
+    btn.disabled = false;
+    btn.textContent = '🔄 Play Again';
+  }
+
+  // Confetti system
+  const confCanvas = document.getElementById('confetti-canvas');
+  const confCtx = confCanvas.getContext('2d');
+  let confPieces = [];
+  let confAnim = null;
+
+  function resizeConfCanvas() {
+    confCanvas.width = window.innerWidth;
+    confCanvas.height = window.innerHeight;
+  }
+  resizeConfCanvas();
+  window.addEventListener('resize', resizeConfCanvas);
+
+  function launchConfetti(count) {
+    confPieces = [];
+    for (let i = 0; i < count; i++) {
+      confPieces.push({
+        x: Math.random() * confCanvas.width,
+        y: -20,
+        vx: (Math.random() - 0.5) * 7,
+        vy: Math.random() * 4 + 2,
+        color: MOONCAKE_COLORS[Math.floor(Math.random() * MOONCAKE_COLORS.length)],
+        size: Math.random() * 10 + 5,
+        spin: Math.random() * 0.25 - 0.125,
+        angle: 0,
+        shape: Math.random() > 0.5 ? 'rect' : 'circle',
+        opacity: 1,
+      });
+    }
+    if (confAnim) cancelAnimationFrame(confAnim);
+    animConf();
+  }
+
+  function animConf() {
+    confCtx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+    confPieces = confPieces.filter(p => p.opacity > 0.01);
+    confPieces.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.08;
+      p.angle += p.spin;
+      if (p.y > confCanvas.height * 0.65) p.opacity -= 0.025;
+
+      confCtx.save();
+      confCtx.globalAlpha = p.opacity;
+      confCtx.translate(p.x, p.y);
+      confCtx.rotate(p.angle);
+      confCtx.fillStyle = p.color;
+      if (p.shape === 'circle') {
+        confCtx.beginPath();
+        confCtx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+        confCtx.fill();
+      } else {
+        confCtx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+      }
+      confCtx.restore();
+    });
+    if (confPieces.length > 0) confAnim = requestAnimationFrame(animConf);
+    else confCtx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+  }
+</script>
+</body>
+</html>

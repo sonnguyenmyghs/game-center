@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Block Blast</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+body{background:#0a0a1a;color:#fff;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;align-items:center}
+
+.header{width:100%;max-width:500px;display:flex;align-items:center;justify-content:space-between;padding:8px 16px;flex-shrink:0}
+.back-btn{background:rgba(255,255,255,.1);border:none;color:#fff;font-size:14px;padding:6px 14px;border-radius:8px;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:4px;transition:background .2s}
+.back-btn:hover{background:rgba(255,255,255,.2)}
+.title{font-size:22px;font-weight:800;background:linear-gradient(135deg,#ff6b6b,#ffa500,#ffe66d,#51cf66,#339af0,#cc5de8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:1px}
+
+.score-bar{width:100%;max-width:500px;display:flex;justify-content:space-around;padding:4px 16px;flex-shrink:0}
+.score-box{text-align:center}
+.score-label{font-size:11px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1px}
+.score-value{font-size:22px;font-weight:700;transition:transform .15s}
+.score-value.pop{animation:scorePop .3s ease}
+@keyframes scorePop{0%{transform:scale(1)}50%{transform:scale(1.3);color:#ffe66d}100%{transform:scale(1)}}
+
+.game-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;max-width:500px;padding:4px 8px;min-height:0}
+
+.grid-container{position:relative;display:inline-block;flex-shrink:0}
+#grid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;padding:4px;background:rgba(255,255,255,.04);border-radius:10px;border:1px solid rgba(255,255,255,.06)}
+.cell{width:var(--cell-size);height:var(--cell-size);background:rgba(255,255,255,.03);border-radius:4px;border:1px solid rgba(255,255,255,.05);transition:background .15s,transform .15s,border-color .15s}
+.cell.filled{border-color:rgba(255,255,255,.15)}
+.cell.ghost-valid{background:rgba(81,207,102,.25)!important;border-color:rgba(81,207,102,.5)!important}
+.cell.ghost-invalid{background:rgba(255,107,107,.25)!important;border-color:rgba(255,107,107,.5)!important}
+.cell.clearing{animation:cellClear .5s ease forwards}
+@keyframes cellClear{0%{transform:scale(1);filter:brightness(1)}30%{transform:scale(1.1);background:#fff!important;filter:brightness(2)}100%{transform:scale(0);opacity:0}}
+
+.combo-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:32px;font-weight:900;color:#ffe66d;text-shadow:0 0 20px rgba(255,230,109,.5);pointer-events:none;z-index:20;animation:comboAnim .8s ease forwards;white-space:nowrap}
+@keyframes comboAnim{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}40%{transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-80%) scale(1)}}
+
+.pieces-area{width:100%;max-width:500px;flex-shrink:0;padding:8px 12px 12px;display:flex;justify-content:space-around;align-items:center;gap:8px;min-height:100px}
+.piece-slot{display:flex;align-items:center;justify-content:center;padding:6px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);cursor:grab;transition:transform .2s,opacity .2s,box-shadow .2s;flex:1;max-width:140px}
+.piece-slot:active{cursor:grabbing}
+.piece-slot.dragging{opacity:.3;transform:scale(.9)}
+.piece-slot.empty{opacity:.2;pointer-events:none}
+.piece-grid{display:grid;gap:1px}
+.piece-cell{width:var(--piece-cell);height:var(--piece-cell);border-radius:3px}
+.piece-cell.on{border:1px solid rgba(255,255,255,.2)}
+.piece-cell.off{background:transparent}
+
+.drag-preview{position:fixed;pointer-events:none;z-index:100;display:grid;gap:2px;opacity:.85;filter:drop-shadow(0 4px 12px rgba(0,0,0,.5))}
+.drag-preview .piece-cell{width:var(--cell-size);height:var(--cell-size);border-radius:4px;border:1px solid rgba(255,255,255,.25)}
+
+.particles-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:50}
+.particle{position:absolute;width:6px;height:6px;border-radius:50%;pointer-events:none;animation:particleFly .7s ease-out forwards}
+@keyframes particleFly{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--px),var(--py)) scale(0)}}
+
+.overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,10,26,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity .4s}
+.overlay.active{opacity:1;pointer-events:all}
+.overlay-title{font-size:36px;font-weight:900;color:#ff6b6b;margin-bottom:8px}
+.overlay-score-label{font-size:14px;color:rgba(255,255,255,.5);margin-top:16px}
+.overlay-score{font-size:48px;font-weight:800;background:linear-gradient(135deg,#ffe66d,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.overlay-highscore{font-size:16px;color:rgba(255,255,255,.6);margin-top:4px}
+.overlay-btn{margin-top:28px;padding:14px 48px;font-size:18px;font-weight:700;background:linear-gradient(135deg,#339af0,#cc5de8);color:#fff;border:none;border-radius:12px;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.overlay-btn:hover{transform:scale(1.05);box-shadow:0 0 20px rgba(51,154,240,.4)}
+
+/* Block colors */
+.bc-0{background:linear-gradient(135deg,#ff6b6b,#ee5a5a)}
+.bc-1{background:linear-gradient(135deg,#ffa500,#e89400)}
+.bc-2{background:linear-gradient(135deg,#ffe66d,#ebd55c)}
+.bc-3{background:linear-gradient(135deg,#51cf66,#40be55)}
+.bc-4{background:linear-gradient(135deg,#339af0,#2289df)}
+.bc-5{background:linear-gradient(135deg,#cc5de8,#bb4cd7)}
+.bc-6{background:linear-gradient(135deg,#ff8787,#f06595)}
+.bc-7{background:linear-gradient(135deg,#20c997,#12b886)}
+.bc-8{background:linear-gradient(135deg,#748ffc,#5c7cfa)}
+.bc-9{background:linear-gradient(135deg,#ffd43b,#fab005)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="../index.html" class="back-btn">&#8592; Back</a>
+  <div class="title">BLOCK BLAST</div>
+  <div style="width:70px"></div>
+</div>
+
+<div class="score-bar">
+  <div class="score-box"><div class="score-label">Score</div><div class="score-value" id="scoreDisplay">0</div></div>
+  <div class="score-box"><div class="score-label">High Score</div><div class="score-value" id="highScoreDisplay">0</div></div>
+</div>
+
+<div class="game-area">
+  <div class="grid-container" id="gridContainer">
+    <div id="grid"></div>
+  </div>
+</div>
+
+<div class="pieces-area" id="piecesArea"></div>
+
+<div class="particles-container" id="particles"></div>
+
+<div class="overlay" id="overlay">
+  <div class="overlay-title">GAME OVER</div>
+  <div class="overlay-score-label">FINAL SCORE</div>
+  <div class="overlay-score" id="finalScore">0</div>
+  <div class="overlay-highscore" id="overlayHigh">High Score: 0</div>
+  <button class="overlay-btn" id="playAgainBtn">Play Again</button>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+const COLS=8,ROWS=8;
+const COLORS=['bc-0','bc-1','bc-2','bc-3','bc-4','bc-5','bc-6','bc-7','bc-8','bc-9'];
+
+// Shape definitions: each is an array of [row,col] offsets
+const SHAPES=[
+  {name:'single',cells:[[0,0]]},
+  {name:'line2h',cells:[[0,0],[0,1]]},
+  {name:'line2v',cells:[[0,0],[1,0]]},
+  {name:'line3h',cells:[[0,0],[0,1],[0,2]]},
+  {name:'line3v',cells:[[0,0],[1,0],[2,0]]},
+  {name:'line4h',cells:[[0,0],[0,1],[0,2],[0,3]]},
+  {name:'line4v',cells:[[0,0],[1,0],[2,0],[3,0]]},
+  {name:'line5h',cells:[[0,0],[0,1],[0,2],[0,3],[0,4]]},
+  {name:'line5v',cells:[[0,0],[1,0],[2,0],[3,0],[4,0]]},
+  {name:'square',cells:[[0,0],[0,1],[1,0],[1,1]]},
+  {name:'L-br',cells:[[0,0],[1,0],[1,1]]},
+  {name:'L-bl',cells:[[0,1],[1,0],[1,1]]},
+  {name:'L-tr',cells:[[0,0],[0,1],[1,0]]},
+  {name:'L-tl',cells:[[0,0],[0,1],[1,1]]},
+  {name:'T-down',cells:[[0,0],[0,1],[0,2],[1,1]]},
+  {name:'T-up',cells:[[1,0],[1,1],[1,2],[0,1]]},
+  {name:'T-right',cells:[[0,0],[1,0],[2,0],[1,1]]},
+  {name:'T-left',cells:[[0,1],[1,0],[1,1],[2,1]]},
+  {name:'S-h',cells:[[0,1],[0,2],[1,0],[1,1]]},
+  {name:'Z-h',cells:[[0,0],[0,1],[1,1],[1,2]]},
+  {name:'bigL1',cells:[[0,0],[1,0],[2,0],[2,1]]},
+  {name:'bigL2',cells:[[0,0],[0,1],[1,0],[2,0]]},
+  {name:'bigL3',cells:[[0,0],[1,0],[2,0],[2,1],[2,2]]},
+  {name:'corner3',cells:[[0,0],[0,1],[0,2],[1,0],[2,0]]},
+];
+
+let board=[];// ROWS x COLS, each cell null or color class
+let score=0;
+let highScore=parseInt(localStorage.getItem('blockblast_highscore'))||0;
+let currentPieces=[];// array of 3 piece objects {shape, color, placed}
+let dragPiece=null;
+let dragIndex=-1;
+let dragPreviewEl=null;
+let ghostCells=[];
+let ghostValid=false;
+let cellSize=40;
+let pieceCellSize=16;
+let gridEl, piecesAreaEl, scoreEl, highScoreEl, overlayEl, finalScoreEl, overlayHighEl, particlesEl, gridContainerEl;
+
+function init(){
+  gridEl=document.getElementById('grid');
+  piecesAreaEl=document.getElementById('piecesArea');
+  scoreEl=document.getElementById('scoreDisplay');
+  highScoreEl=document.getElementById('highScoreDisplay');
+  overlayEl=document.getElementById('overlay');
+  finalScoreEl=document.getElementById('finalScore');
+  overlayHighEl=document.getElementById('overlayHigh');
+  particlesEl=document.getElementById('particles');
+  gridContainerEl=document.getElementById('gridContainer');
+  document.getElementById('playAgainBtn').addEventListener('click',startGame);
+  computeSizes();
+  window.addEventListener('resize',()=>{computeSizes();renderBoard();renderPieces()});
+  highScoreEl.textContent=highScore;
+  startGame();
+  setupDragListeners();
+}
+
+function computeSizes(){
+  const maxW=Math.min(window.innerWidth-16,500-16);
+  const maxGridH=window.innerHeight*0.55;
+  const s=Math.floor(Math.min((maxW-24)/(COLS),(maxGridH-24)/(ROWS)));
+  cellSize=Math.max(28,Math.min(s,52));
+  pieceCellSize=Math.max(10,Math.min(Math.floor(cellSize*0.42),20));
+  document.documentElement.style.setProperty('--cell-size',cellSize+'px');
+  document.documentElement.style.setProperty('--piece-cell',pieceCellSize+'px');
+}
+
+function startGame(){
+  overlayEl.classList.remove('active');
+  board=[];
+  for(let r=0;r<ROWS;r++){board[r]=[];for(let c=0;c<COLS;c++)board[r][c]=null;}
+  score=0;
+  scoreEl.textContent='0';
+  buildGrid();
+  spawnPieces();
+}
+
+function buildGrid(){
+  gridEl.innerHTML='';
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const d=document.createElement('div');
+      d.className='cell';
+      d.dataset.r=r;
+      d.dataset.c=c;
+      gridEl.appendChild(d);
+    }
+  }
+}
+
+function renderBoard(){
+  const cells=gridEl.children;
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const i=r*COLS+c;
+      const cell=cells[i];
+      cell.className='cell';
+      if(board[r][c]){
+        cell.classList.add('filled',board[r][c]);
+      }
+    }
+  }
+}
+
+function spawnPieces(){
+  currentPieces=[];
+  for(let i=0;i<3;i++){
+    const shape=SHAPES[Math.floor(Math.random()*SHAPES.length)];
+    const color=COLORS[Math.floor(Math.random()*COLORS.length)];
+    currentPieces.push({shape,color,placed:false});
+  }
+  renderPieces();
+  checkGameOver();
+}
+
+function renderPieces(){
+  piecesAreaEl.innerHTML='';
+  currentPieces.forEach((p,idx)=>{
+    const slot=document.createElement('div');
+    slot.className='piece-slot'+(p.placed?' empty':'');
+    slot.dataset.idx=idx;
+
+    if(!p.placed){
+      const {rows,cols}=getShapeDims(p.shape);
+      const pg=document.createElement('div');
+      pg.className='piece-grid';
+      pg.style.gridTemplateColumns=`repeat(${cols},var(--piece-cell))`;
+      const map=new Set(p.shape.cells.map(c=>c[0]+','+c[1]));
+      for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+          const d=document.createElement('div');
+          d.className='piece-cell '+(map.has(r+','+c)?'on '+p.color:'off');
+          pg.appendChild(d);
+        }
+      }
+      slot.appendChild(pg);
+    }
+    piecesAreaEl.appendChild(slot);
+  });
+}
+
+function getShapeDims(shape){
+  let maxR=0,maxC=0;
+  shape.cells.forEach(([r,c])=>{if(r>maxR)maxR=r;if(c>maxC)maxC=c;});
+  return{rows:maxR+1,cols:maxC+1};
+}
+
+// Drag system
+function setupDragListeners(){
+  // Mouse
+  document.addEventListener('mousedown',onDragStart);
+  document.addEventListener('mousemove',onDragMove);
+  document.addEventListener('mouseup',onDragEnd);
+  // Touch
+  document.addEventListener('touchstart',onDragStart,{passive:false});
+  document.addEventListener('touchmove',onDragMove,{passive:false});
+  document.addEventListener('touchend',onDragEnd,{passive:false});
+}
+
+function getPos(e){
+  if(e.touches&&e.touches.length>0)return{x:e.touches[0].clientX,y:e.touches[0].clientY};
+  if(e.changedTouches&&e.changedTouches.length>0)return{x:e.changedTouches[0].clientX,y:e.changedTouches[0].clientY};
+  return{x:e.clientX,y:e.clientY};
+}
+
+function onDragStart(e){
+  const pos=getPos(e);
+  const slotEl=e.target.closest('.piece-slot');
+  if(!slotEl||slotEl.classList.contains('empty'))return;
+  const idx=parseInt(slotEl.dataset.idx);
+  if(currentPieces[idx].placed)return;
+  e.preventDefault();
+  dragIndex=idx;
+  dragPiece=currentPieces[idx];
+  slotEl.classList.add('dragging');
+  createDragPreview(pos);
+  updateGhost(pos);
+}
+
+function onDragMove(e){
+  if(!dragPiece)return;
+  e.preventDefault();
+  const pos=getPos(e);
+  moveDragPreview(pos);
+  updateGhost(pos);
+}
+
+function onDragEnd(e){
+  if(!dragPiece)return;
+  e.preventDefault();
+  if(ghostValid&&ghostCells.length>0){
+    placePiece();
+  }
+  clearGhost();
+  removeDragPreview();
+  const slots=piecesAreaEl.querySelectorAll('.piece-slot');
+  slots.forEach(s=>s.classList.remove('dragging'));
+  dragPiece=null;
+  dragIndex=-1;
+}
+
+function createDragPreview(pos){
+  if(dragPreviewEl)dragPreviewEl.remove();
+  const {rows,cols}=getShapeDims(dragPiece.shape);
+  const el=document.createElement('div');
+  el.className='drag-preview';
+  el.style.gridTemplateColumns=`repeat(${cols},var(--cell-size))`;
+  const map=new Set(dragPiece.shape.cells.map(c=>c[0]+','+c[1]));
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const d=document.createElement('div');
+      d.className='piece-cell '+(map.has(r+','+c)?'on '+dragPiece.color:'off');
+      if(!map.has(r+','+c))d.style.visibility='hidden';
+      el.appendChild(d);
+    }
+  }
+  document.body.appendChild(el);
+  dragPreviewEl=el;
+  moveDragPreview(pos);
+}
+
+function moveDragPreview(pos){
+  if(!dragPreviewEl)return;
+  const {rows,cols}=getShapeDims(dragPiece.shape);
+  const w=cols*(cellSize+2);
+  const h=rows*(cellSize+2);
+  dragPreviewEl.style.left=(pos.x-w/2)+'px';
+  dragPreviewEl.style.top=(pos.y-h-30)+'px';
+}
+
+function removeDragPreview(){
+  if(dragPreviewEl){dragPreviewEl.remove();dragPreviewEl=null;}
+}
+
+function updateGhost(pos){
+  clearGhost();
+  if(!dragPiece)return;
+  const gridRect=gridEl.getBoundingClientRect();
+  const {rows:shapeRows,cols:shapeCols}=getShapeDims(dragPiece.shape);
+  const previewW=shapeCols*(cellSize+2);
+  const previewH=shapeRows*(cellSize+2);
+  const cx=pos.x-previewW/2+previewW/2;
+  const cy=pos.y-previewH-30+previewH/2;
+  const gc=Math.round((cx-gridRect.left-4-cellSize/2)/(cellSize+2));
+  const gr=Math.round((cy-gridRect.top-4-cellSize/2)/(cellSize+2));
+
+  const positions=dragPiece.shape.cells.map(([r,c])=>({r:gr+r,c:gc+c}));
+  let valid=true;
+  for(const p of positions){
+    if(p.r<0||p.r>=ROWS||p.c<0||p.c>=COLS){valid=false;break;}
+    if(board[p.r][p.c]){valid=false;break;}
+  }
+
+  ghostCells=positions;
+  ghostValid=valid;
+
+  const gridCells=gridEl.children;
+  for(const p of positions){
+    if(p.r>=0&&p.r<ROWS&&p.c>=0&&p.c<COLS){
+      const cell=gridCells[p.r*COLS+p.c];
+      cell.classList.add(valid?'ghost-valid':'ghost-invalid');
+    }
+  }
+}
+
+function clearGhost(){
+  const cells=gridEl.querySelectorAll('.ghost-valid,.ghost-invalid');
+  cells.forEach(c=>{c.classList.remove('ghost-valid','ghost-invalid');});
+  ghostCells=[];
+  ghostValid=false;
+}
+
+function placePiece(){
+  const cellsPlaced=[];
+  for(const p of ghostCells){
+    board[p.r][p.c]=dragPiece.color;
+    cellsPlaced.push(p);
+  }
+  currentPieces[dragIndex].placed=true;
+  renderPieces();
+
+  // Score for placing
+  addScore(cellsPlaced.length*10);
+  renderBoard();
+
+  // Check for line clears
+  setTimeout(()=>{
+    checkAndClearLines();
+    // Check if all 3 placed
+    if(currentPieces.every(p=>p.placed)){
+      setTimeout(()=>spawnPieces(),300);
+    } else {
+      checkGameOver();
+    }
+  },50);
+}
+
+function checkAndClearLines(){
+  let rowsToClear=[];
+  let colsToClear=[];
+
+  for(let r=0;r<ROWS;r++){
+    let full=true;
+    for(let c=0;c<COLS;c++){if(!board[r][c]){full=false;break;}}
+    if(full)rowsToClear.push(r);
+  }
+  for(let c=0;c<COLS;c++){
+    let full=true;
+    for(let r=0;r<ROWS;r++){if(!board[r][c]){full=false;break;}}
+    if(full)colsToClear.push(c);
+  }
+
+  const totalLines=rowsToClear.length+colsToClear.length;
+  if(totalLines===0)return;
+
+  // Collect cells to clear
+  const clearSet=new Set();
+  for(const r of rowsToClear)for(let c=0;c<COLS;c++)clearSet.add(r+','+c);
+  for(const c of colsToClear)for(let r=0;r<ROWS;r++)clearSet.add(r+','+c);
+
+  // Animate
+  const gridCells=gridEl.children;
+  const clearArr=[...clearSet].map(s=>{const [r,c]=s.split(',').map(Number);return{r,c};});
+
+  clearArr.forEach(({r,c})=>{
+    const cell=gridCells[r*COLS+c];
+    cell.classList.add('clearing');
+    spawnParticles(cell);
+  });
+
+  // Score
+  let lineScore=totalLines*100;
+  let comboMult=1;
+  if(totalLines>=2){
+    comboMult=totalLines;
+    lineScore*=comboMult;
+    showCombo(comboMult);
+  }
+  addScore(lineScore);
+
+  // Actually clear after animation
+  setTimeout(()=>{
+    clearArr.forEach(({r,c})=>{board[r][c]=null;});
+    renderBoard();
+  },500);
+}
+
+function showCombo(mult){
+  const el=document.createElement('div');
+  el.className='combo-text';
+  el.textContent='COMBO x'+mult+'!';
+  gridContainerEl.appendChild(el);
+  setTimeout(()=>el.remove(),900);
+}
+
+function spawnParticles(cell){
+  const rect=cell.getBoundingClientRect();
+  const cx=rect.left+rect.width/2;
+  const cy=rect.top+rect.height/2;
+  const colors=['#ff6b6b','#ffa500','#ffe66d','#51cf66','#339af0','#cc5de8','#fff'];
+  for(let i=0;i<6;i++){
+    const p=document.createElement('div');
+    p.className='particle';
+    const color=colors[Math.floor(Math.random()*colors.length)];
+    p.style.background=color;
+    p.style.left=cx+'px';
+    p.style.top=cy+'px';
+    const angle=Math.random()*Math.PI*2;
+    const dist=30+Math.random()*40;
+    p.style.setProperty('--px',Math.cos(angle)*dist+'px');
+    p.style.setProperty('--py',Math.sin(angle)*dist+'px');
+    particlesEl.appendChild(p);
+    setTimeout(()=>p.remove(),700);
+  }
+}
+
+function addScore(pts){
+  score+=pts;
+  scoreEl.textContent=score;
+  scoreEl.classList.remove('pop');
+  void scoreEl.offsetWidth;
+  scoreEl.classList.add('pop');
+  if(score>highScore){
+    highScore=score;
+    highScoreEl.textContent=highScore;
+    localStorage.setItem('blockblast_highscore',highScore);
+  }
+}
+
+function canPlaceAnywhere(shape){
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      let fits=true;
+      for(const [dr,dc] of shape.cells){
+        const nr=r+dr,nc=c+dc;
+        if(nr<0||nr>=ROWS||nc<0||nc>=COLS||board[nr][nc]){fits=false;break;}
+      }
+      if(fits)return true;
+    }
+  }
+  return false;
+}
+
+function checkGameOver(){
+  const remaining=currentPieces.filter(p=>!p.placed);
+  if(remaining.length===0)return;
+  let anyCanPlace=false;
+  for(const p of remaining){
+    if(canPlaceAnywhere(p.shape)){anyCanPlace=true;break;}
+  }
+  if(!anyCanPlace){
+    setTimeout(gameOver,400);
+  }
+}
+
+function gameOver(){
+  if(score>highScore){
+    highScore=score;
+    localStorage.setItem('blockblast_highscore',highScore);
+    highScoreEl.textContent=highScore;
+  }
+  finalScoreEl.textContent=score;
+  overlayHighEl.textContent='High Score: '+highScore;
+  overlayEl.classList.add('active');
+}
+
+init();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mid-Autumn Gift Box 🎑</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: #0a0a1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', sans-serif;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Atmosphere */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255,140,0,0.18) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 40% at 80% 20%, rgba(255,80,0,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 60% at 20% 80%, rgba(180,80,0,0.10) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Moon glow */
+  body::after {
+    content: '🌕';
+    position: fixed;
+    top: 30px;
+    right: 60px;
+    font-size: 80px;
+    filter: drop-shadow(0 0 30px rgba(255,200,50,0.6));
+    animation: moonFloat 6s ease-in-out infinite;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  @keyframes moonFloat {
+    0%, 100% { transform: translateY(0) rotate(-5deg); }
+    50% { transform: translateY(-10px) rotate(5deg); }
+  }
+
+  /* Lanterns */
+  .lantern {
+    position: fixed;
+    font-size: 32px;
+    animation: lanternFloat linear infinite;
+    z-index: 0;
+    pointer-events: none;
+    filter: drop-shadow(0 0 10px rgba(255,140,0,0.7));
+  }
+
+  @keyframes lanternFloat {
+    0% { transform: translateY(110vh) translateX(0) rotate(0deg); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 0.8; }
+    100% { transform: translateY(-20vh) translateX(30px) rotate(10deg); opacity: 0; }
+  }
+
+  .back-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s;
+  }
+  .back-btn:hover { background: rgba(255,255,255,0.2); transform: translateX(-3px); }
+
+  .game-container {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    padding: 20px;
+  }
+
+  .title {
+    text-align: center;
+    color: #fff;
+  }
+  .title h1 {
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: 800;
+    background: linear-gradient(135deg, #ff8c00, #ffd700, #ff4500, #ff8c00);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 3s linear infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+  }
+  .title p {
+    color: rgba(255,200,100,0.8);
+    font-size: 1rem;
+    margin-top: 6px;
+  }
+
+  /* Gift Box */
+  .box-wrapper {
+    perspective: 800px;
+    cursor: pointer;
+    width: 200px;
+    height: 220px;
+    position: relative;
+  }
+
+  .gift-box {
+    width: 200px;
+    height: 220px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.3s;
+  }
+  .gift-box:hover:not(.opened) { transform: scale(1.05) rotateY(5deg); }
+
+  .box-body {
+    position: absolute;
+    bottom: 0;
+    width: 200px;
+    height: 160px;
+    background: linear-gradient(135deg, #b8520a 0%, #d4720e 40%, #8b3a00 100%);
+    border-radius: 8px;
+    border: 3px solid #ffd700;
+    box-shadow:
+      0 0 30px rgba(255,140,0,0.5),
+      inset 0 2px 10px rgba(255,200,50,0.2),
+      0 15px 40px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+  .box-body::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 100%;
+    background: linear-gradient(to bottom, #ffd700, #ff8c00);
+    opacity: 0.8;
+  }
+
+  /* Mooncake pattern on box */
+  .box-body::after {
+    content: '🥮';
+    position: absolute;
+    font-size: 50px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.15;
+  }
+
+  .box-lid {
+    position: absolute;
+    top: 0;
+    width: 210px;
+    left: -5px;
+    height: 75px;
+    background: linear-gradient(135deg, #d4720e 0%, #ff8c00 40%, #c05800 100%);
+    border-radius: 8px;
+    border: 3px solid #ffd700;
+    box-shadow:
+      0 0 20px rgba(255,140,0,0.4),
+      inset 0 2px 8px rgba(255,200,50,0.2);
+    transform-origin: top center;
+    transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 5;
+    overflow: hidden;
+  }
+  .box-lid::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 100%;
+    background: linear-gradient(to bottom, #ffd700, #ff8c00);
+    opacity: 0.8;
+  }
+
+  /* Bow */
+  .bow {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 40px;
+    z-index: 6;
+    filter: drop-shadow(0 0 8px rgba(255,200,50,0.8));
+    transition: transform 0.8s;
+  }
+
+  .gift-box.opened .box-lid {
+    transform: rotateX(-110deg);
+  }
+  .gift-box.opened .bow {
+    transform: translateX(-50%) translateY(-30px) rotate(20deg);
+  }
+
+  /* Prize reveal */
+  .prize-inside {
+    position: absolute;
+    bottom: 160px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    z-index: 20;
+    animation: prizeFloat 0.6s ease-out forwards;
+  }
+  .prize-inside.show { display: flex; }
+
+  @keyframes prizeFloat {
+    0% { transform: translateX(-50%) translateY(20px); opacity: 0; }
+    100% { transform: translateX(-50%) translateY(-10px); opacity: 1; }
+  }
+
+  .prize-emoji { font-size: 50px; filter: drop-shadow(0 0 15px rgba(255,200,50,0.9)); }
+  .prize-text {
+    color: #ffd700;
+    font-size: 1.1rem;
+    font-weight: 700;
+    white-space: nowrap;
+    text-shadow: 0 0 10px rgba(255,140,0,0.8);
+    background: rgba(0,0,0,0.7);
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid #ffd700;
+  }
+
+  .open-btn {
+    padding: 16px 50px;
+    background: linear-gradient(135deg, #ff8c00, #ffd700, #ff4500);
+    background-size: 200% 200%;
+    border: none;
+    border-radius: 50px;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 0 25px rgba(255,140,0,0.6);
+    transition: all 0.3s;
+    animation: shimmer 3s linear infinite;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    letter-spacing: 1px;
+  }
+  .open-btn:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 0 40px rgba(255,140,0,0.8);
+  }
+  .open-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Info panel */
+  .info-panel {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .info-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,140,0,0.3);
+    border-radius: 15px;
+    padding: 15px 20px;
+    text-align: center;
+    color: rgba(255,255,255,0.8);
+    min-width: 120px;
+  }
+  .info-card .num {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #ffd700;
+  }
+  .info-card .label { font-size: 0.8rem; color: rgba(255,200,100,0.6); }
+
+  /* Result modal */
+  .result-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+  }
+  .result-modal.show { display: flex; }
+
+  .result-card {
+    background: linear-gradient(135deg, #1a0a00, #2d1500);
+    border: 2px solid #ffd700;
+    border-radius: 24px;
+    padding: 40px;
+    text-align: center;
+    max-width: 380px;
+    width: 90%;
+    box-shadow:
+      0 0 60px rgba(255,140,0,0.4),
+      0 20px 60px rgba(0,0,0,0.6);
+    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes popIn {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .result-card .big-emoji { font-size: 80px; margin-bottom: 15px; }
+  .result-card h2 {
+    font-size: 1.6rem;
+    color: #ffd700;
+    margin-bottom: 10px;
+    text-shadow: 0 0 15px rgba(255,200,50,0.6);
+  }
+  .result-card p { color: rgba(255,200,100,0.8); margin-bottom: 25px; }
+
+  .result-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn-again {
+    padding: 12px 28px;
+    background: linear-gradient(135deg, #ff8c00, #ffd700);
+    border: none;
+    border-radius: 25px;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .btn-again:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(255,140,0,0.6); }
+
+  .btn-home {
+    padding: 12px 28px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 25px;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s;
+  }
+  .btn-home:hover { background: rgba(255,255,255,0.2); }
+
+  /* Prize list */
+  .prize-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    max-width: 400px;
+  }
+  .prize-item {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,140,0,0.2);
+    border-radius: 12px;
+    padding: 12px 8px;
+    text-align: center;
+    transition: all 0.3s;
+  }
+  .prize-item:hover { border-color: rgba(255,140,0,0.5); background: rgba(255,140,0,0.08); }
+  .prize-item .p-emoji { font-size: 24px; }
+  .prize-item .p-name { font-size: 0.65rem; color: rgba(255,200,100,0.7); margin-top: 4px; }
+
+  /* Confetti canvas */
+  #confetti-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 150;
+  }
+
+  .shake {
+    animation: shake 0.5s ease-in-out;
+  }
+  @keyframes shake {
+    0%, 100% { transform: rotate(0deg); }
+    20% { transform: rotate(-8deg) scale(1.05); }
+    40% { transform: rotate(8deg) scale(1.05); }
+    60% { transform: rotate(-5deg); }
+    80% { transform: rotate(5deg); }
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-btn">← Back</a>
+
+<canvas id="confetti-canvas"></canvas>
+
+<!-- Lanterns -->
+<div class="lantern" style="left:5%;animation-duration:8s;animation-delay:0s;">🏮</div>
+<div class="lantern" style="left:15%;animation-duration:10s;animation-delay:2s;">🏮</div>
+<div class="lantern" style="left:75%;animation-duration:9s;animation-delay:1s;">🏮</div>
+<div class="lantern" style="left:88%;animation-duration:11s;animation-delay:3s;">🏮</div>
+<div class="lantern" style="left:45%;animation-duration:7s;animation-delay:5s;">🌕</div>
+<div class="lantern" style="left:60%;animation-duration:12s;animation-delay:0.5s;">🏮</div>
+
+<div class="game-container">
+  <div class="title">
+    <h1>🎑 Mid-Autumn Gift Box</h1>
+    <p>Tap to open your Mid-Autumn gift box!</p>
+  </div>
+
+  <div class="box-wrapper" id="boxWrapper" onclick="openBox()">
+    <div class="gift-box" id="giftBox">
+      <div class="bow">🎀</div>
+      <div class="box-lid"></div>
+      <div class="box-body"></div>
+    </div>
+    <div class="prize-inside" id="prizeInside">
+      <div class="prize-emoji" id="prizeEmoji">🎑</div>
+      <div class="prize-text" id="prizeText">Your Prize</div>
+    </div>
+  </div>
+
+  <button class="open-btn" id="openBtn" onclick="openBox()">🥮 Open Gift Box</button>
+
+  <div class="info-panel">
+    <div class="info-card">
+      <div class="num" id="openCount">0</div>
+      <div class="label">Opens</div>
+    </div>
+    <div class="info-card">
+      <div class="num" id="winCount">0</div>
+      <div class="label">Prizes Won</div>
+    </div>
+    <div class="info-card">
+      <div class="num" id="jackpotCount">0</div>
+      <div class="label">Jackpot</div>
+    </div>
+  </div>
+
+  <div class="prize-list">
+    <div class="prize-item"><div class="p-emoji">🎑</div><div class="p-name">Grand Feast!</div></div>
+    <div class="prize-item"><div class="p-emoji">🏮</div><div class="p-name">Voucher 200k</div></div>
+    <div class="prize-item"><div class="p-emoji">🥮</div><div class="p-name">Mooncake Box</div></div>
+    <div class="prize-item"><div class="p-emoji">⭐</div><div class="p-name">200 Points</div></div>
+    <div class="prize-item"><div class="p-emoji">🌕</div><div class="p-name">Try Again</div></div>
+    <div class="prize-item"><div class="p-emoji">🌟</div><div class="p-name">100 Points</div></div>
+  </div>
+</div>
+
+<!-- Result Modal -->
+<div class="result-modal" id="resultModal">
+  <div class="result-card">
+    <div class="big-emoji" id="modalEmoji">🎑</div>
+    <h2 id="modalTitle">Congratulations!</h2>
+    <p id="modalDesc">You have received a Mid-Autumn Festival prize!</p>
+    <div class="result-btns">
+      <button class="btn-again" onclick="playAgain()">🔄 Open Again</button>
+      <a href="../index.html" class="btn-home">🏠 Home</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  const PRIZES = [
+    { emoji: '🎑', name: 'Mid-Autumn Grand Feast!', desc: 'Wow! You won the special Mid-Autumn Festival jackpot!', isJackpot: true, weight: 2 },
+    { emoji: '🏮', name: 'Voucher 200k', desc: 'Amazing! A 200,000đ voucher is waiting for you!', isJackpot: false, weight: 8 },
+    { emoji: '🥮', name: 'Mooncake Box', desc: 'Delicious! A special Mid-Autumn mooncake box!', isJackpot: false, weight: 12 },
+    { emoji: '⭐', name: '200 Bonus Points', desc: 'You received 200 bonus points!', isJackpot: false, weight: 25 },
+    { emoji: '🌕', name: 'Better Luck Next Time', desc: 'The full moon will smile upon you next time!', isJackpot: false, weight: 30 },
+    { emoji: '🌟', name: '100 Bonus Points', desc: 'You received 100 bonus points!', isJackpot: false, weight: 23 },
+  ];
+
+  let openCount = 0, winCount = 0, jackpotCount = 0;
+  let isAnimating = false;
+  let currentPrize = null;
+
+  const MOONCAKE_COLORS = ['#ff8c00','#ffd700','#ff4500','#d4720e','#ffaa00','#ff6600'];
+
+  function weightedRandom(prizes) {
+    const total = prizes.reduce((s, p) => s + p.weight, 0);
+    let r = Math.random() * total;
+    for (const p of prizes) {
+      r -= p.weight;
+      if (r <= 0) return p;
+    }
+    return prizes[prizes.length - 1];
+  }
+
+  function openBox() {
+    if (isAnimating) return;
+    isAnimating = true;
+
+    const box = document.getElementById('giftBox');
+    const btn = document.getElementById('openBtn');
+    btn.disabled = true;
+
+    // Shake first
+    box.classList.add('shake');
+    setTimeout(() => {
+      box.classList.remove('shake');
+      box.classList.add('opened');
+
+      // Select prize
+      currentPrize = weightedRandom(PRIZES);
+      openCount++;
+      if (currentPrize.emoji !== '🌕') winCount++;
+      if (currentPrize.isJackpot) jackpotCount++;
+      updateCounters();
+
+      // Show prize inside box
+      const prizeInside = document.getElementById('prizeInside');
+      document.getElementById('prizeEmoji').textContent = currentPrize.emoji;
+      document.getElementById('prizeText').textContent = currentPrize.name;
+      prizeInside.classList.add('show');
+
+      // Launch confetti for wins
+      if (currentPrize.isJackpot) launchConfetti(120);
+      else if (currentPrize.emoji !== '🌕') launchConfetti(50);
+
+      // Show modal after delay
+      setTimeout(showModal, 1400);
+    }, 500);
+  }
+
+  function showModal() {
+    const modal = document.getElementById('resultModal');
+    document.getElementById('modalEmoji').textContent = currentPrize.emoji;
+    document.getElementById('modalTitle').textContent = currentPrize.name;
+    document.getElementById('modalDesc').textContent = currentPrize.desc;
+    modal.classList.add('show');
+  }
+
+  function playAgain() {
+    const modal = document.getElementById('resultModal');
+    modal.classList.remove('show');
+
+    const box = document.getElementById('giftBox');
+    const prizeInside = document.getElementById('prizeInside');
+    prizeInside.classList.remove('show');
+
+    setTimeout(() => {
+      box.classList.remove('opened');
+      setTimeout(() => {
+        isAnimating = false;
+        document.getElementById('openBtn').disabled = false;
+      }, 400);
+    }, 200);
+  }
+
+  function updateCounters() {
+    document.getElementById('openCount').textContent = openCount;
+    document.getElementById('winCount').textContent = winCount;
+    document.getElementById('jackpotCount').textContent = jackpotCount;
+  }
+
+  // Confetti system
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  let pieces = [];
+  let animFrame = null;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  function launchConfetti(count) {
+    pieces = [];
+    for (let i = 0; i < count; i++) {
+      pieces.push({
+        x: Math.random() * canvas.width,
+        y: -20,
+        vx: (Math.random() - 0.5) * 6,
+        vy: Math.random() * 4 + 2,
+        color: MOONCAKE_COLORS[Math.floor(Math.random() * MOONCAKE_COLORS.length)],
+        size: Math.random() * 10 + 5,
+        spin: Math.random() * 0.2 - 0.1,
+        angle: 0,
+        shape: Math.random() > 0.5 ? 'rect' : 'circle',
+        opacity: 1,
+      });
+    }
+    if (animFrame) cancelAnimationFrame(animFrame);
+    animateConfetti();
+  }
+
+  function animateConfetti() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces = pieces.filter(p => p.opacity > 0.01);
+    pieces.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.08;
+      p.angle += p.spin;
+      if (p.y > canvas.height * 0.7) p.opacity -= 0.02;
+
+      ctx.save();
+      ctx.globalAlpha = p.opacity;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.fillStyle = p.color;
+      if (p.shape === 'circle') {
+        ctx.beginPath();
+        ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+      }
+      ctx.restore();
+    });
+    if (pieces.length > 0) animFrame = requestAnimationFrame(animateConfetti);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // Close modal on backdrop click
+  document.getElementById('resultModal').addEventListener('click', function(e) {
+    if (e.target === this) playAgain();
+  });
+</script>
+</body>
+</html>

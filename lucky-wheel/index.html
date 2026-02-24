@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Lucky Wheel</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow-x: hidden;
+    background: #0a0a1a;
+    color: #fff;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 12px 16px 24px;
+  }
+
+  /* ── Back button ── */
+  .back-btn {
+    position: absolute;
+    top: 14px; left: 14px;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px;
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 10px;
+    color: #ccc;
+    font-size: 14px;
+    text-decoration: none;
+    transition: background .2s, color .2s;
+    z-index: 50;
+  }
+  .back-btn:hover, .back-btn:active { background: rgba(255,255,255,.14); color: #fff; }
+  .back-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+  /* ── Title ── */
+  .title {
+    margin-top: 48px;
+    font-size: clamp(28px, 7vw, 44px);
+    font-weight: 800;
+    text-align: center;
+    background: linear-gradient(135deg, #ff3864, #fdcb6e, #00b894, #6c5ce7);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 4s ease infinite;
+    letter-spacing: -0.5px;
+  }
+  @keyframes gradientShift {
+    0%,100% { background-position: 0% 50%; }
+    50%     { background-position: 100% 50%; }
+  }
+
+  .subtitle {
+    margin-top: 4px;
+    font-size: 14px;
+    color: rgba(255,255,255,.45);
+    text-align: center;
+  }
+
+  /* ── Wheel area ── */
+  .wheel-wrapper {
+    position: relative;
+    margin-top: 20px;
+    width: min(88vw, 400px);
+    height: min(88vw, 400px);
+    flex-shrink: 0;
+  }
+
+  /* Glow ring */
+  .wheel-glow {
+    position: absolute;
+    inset: -12px;
+    border-radius: 50%;
+    background: conic-gradient(#ff3864, #6c5ce7, #00b894, #fdcb6e, #0984e3, #e17055, #00cec9, #ff3864);
+    filter: blur(18px);
+    opacity: .45;
+    animation: glowPulse 3s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes glowPulse {
+    0%,100% { opacity: .35; transform: scale(1); }
+    50%     { opacity: .55; transform: scale(1.03); }
+  }
+
+  .wheel-border {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,.15);
+    pointer-events: none;
+  }
+
+  canvas#wheel {
+    display: block;
+    width: 100%; height: 100%;
+    border-radius: 50%;
+  }
+
+  /* ── Pointer ── */
+  .pointer {
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 18px solid transparent;
+    border-right: 18px solid transparent;
+    border-top: 34px solid #ffd700;
+    filter: drop-shadow(0 0 8px rgba(255,215,0,.6));
+    z-index: 10;
+    transition: filter .3s;
+  }
+  .pointer::after {
+    content: '';
+    position: absolute;
+    top: -38px; left: -6px;
+    width: 12px; height: 12px;
+    background: #ffd700;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(255,215,0,.7);
+  }
+
+  /* ── Center button ── */
+  .center-btn {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,.3);
+    background: radial-gradient(circle, #1a1a3e 0%, #0d0d24 100%);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    cursor: pointer;
+    z-index: 12;
+    box-shadow: 0 0 20px rgba(108,92,231,.4), inset 0 0 12px rgba(108,92,231,.2);
+    transition: transform .2s, box-shadow .2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .center-btn:hover { transform: translate(-50%, -50%) scale(1.08); box-shadow: 0 0 30px rgba(108,92,231,.6); }
+  .center-btn:active { transform: translate(-50%, -50%) scale(0.95); }
+  .center-btn.disabled { pointer-events: none; opacity: .5; }
+
+  /* ── Result overlay ── */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .4s;
+  }
+  .overlay.show { opacity: 1; pointer-events: auto; }
+
+  .result-card {
+    background: linear-gradient(145deg, #1a1a3e, #12122a);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 24px;
+    padding: 40px 32px 32px;
+    text-align: center;
+    max-width: 340px;
+    width: 88%;
+    transform: scale(.8) translateY(30px);
+    transition: transform .45s cubic-bezier(.34,1.56,.64,1);
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  .overlay.show .result-card { transform: scale(1) translateY(0); }
+
+  .result-emoji {
+    font-size: 56px;
+    margin-bottom: 12px;
+    animation: emojiPop .5s ease .3s both;
+  }
+  @keyframes emojiPop {
+    0%   { transform: scale(0) rotate(-20deg); }
+    60%  { transform: scale(1.3) rotate(5deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+
+  .result-label {
+    font-size: 14px;
+    color: rgba(255,255,255,.5);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+
+  .result-prize {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 28px;
+    line-height: 1.3;
+  }
+
+  .btn-spin-again {
+    padding: 14px 40px;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    background: linear-gradient(135deg, #6c5ce7, #a855f7);
+    box-shadow: 0 4px 20px rgba(108,92,231,.4);
+    transition: transform .2s, box-shadow .2s;
+  }
+  .btn-spin-again:hover { transform: scale(1.05); box-shadow: 0 6px 28px rgba(108,92,231,.55); }
+  .btn-spin-again:active { transform: scale(.97); }
+
+  /* ── Confetti canvas ── */
+  #confetti {
+    position: fixed;
+    inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 120;
+  }
+
+  /* ── Tick markers on wheel rim ── */
+  .tick-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: auto;
+    padding-top: 20px;
+    font-size: 12px;
+    color: rgba(255,255,255,.25);
+    text-align: center;
+  }
+
+  /* ── Responsive tweaks ── */
+  @media (max-height: 640px) {
+    .title { margin-top: 36px; font-size: 24px; }
+    .subtitle { display: none; }
+    .wheel-wrapper { margin-top: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-btn">
+  <svg viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+  Back
+</a>
+
+<h1 class="title">Lucky Wheel</h1>
+<p class="subtitle">Spin to win amazing prizes!</p>
+
+<div class="wheel-wrapper" id="wheelWrapper">
+  <div class="wheel-glow"></div>
+  <div class="wheel-border"></div>
+  <canvas id="wheel"></canvas>
+  <div class="pointer"></div>
+  <button class="center-btn" id="spinBtn">SPIN</button>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="result-card">
+    <div class="result-emoji" id="resultEmoji"></div>
+    <div class="result-label">You won</div>
+    <div class="result-prize" id="resultPrize"></div>
+    <button class="btn-spin-again" id="spinAgainBtn">Spin Again</button>
+  </div>
+</div>
+
+<canvas id="confetti"></canvas>
+
+<div class="footer">Tap SPIN to try your luck</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  PRIZE CONFIGURATION  — Edit this array to customize!
+// ═══════════════════════════════════════════════════
+const PRIZES = [
+  { label: '\u{1F389} Grand Prize',  color: '#ff3864', probability: 0.05 },
+  { label: '\u{1F381} Gift Card $50', color: '#6c5ce7', probability: 0.10 },
+  { label: '\u{1F3C6} Trophy',        color: '#00b894', probability: 0.10 },
+  { label: '\u2B50 500 Points',       color: '#fdcb6e', probability: 0.15 },
+  { label: '\u{1F3AF} 200 Points',    color: '#0984e3', probability: 0.20 },
+  { label: '\u{1F4AB} 100 Points',    color: '#e17055', probability: 0.20 },
+  { label: '\u{1F388} 50 Points',     color: '#00cec9', probability: 0.15 },
+  { label: '\u{1F504} Try Again',     color: '#636e72', probability: 0.05 },
+];
+
+// ═══════════════════════════════════════════════════
+//  CANVAS SETUP
+// ═══════════════════════════════════════════════════
+const canvas  = document.getElementById('wheel');
+const ctx     = canvas.getContext('2d');
+const wrapper = document.getElementById('wheelWrapper');
+
+let SIZE, CENTER, RADIUS;
+
+function resizeCanvas() {
+  const rect = wrapper.getBoundingClientRect();
+  const dpr  = window.devicePixelRatio || 1;
+  SIZE   = Math.round(rect.width);
+  canvas.width  = SIZE * dpr;
+  canvas.height = SIZE * dpr;
+  canvas.style.width  = SIZE + 'px';
+  canvas.style.height = SIZE + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  CENTER = SIZE / 2;
+  RADIUS = SIZE / 2 - 4;
+  drawWheel(currentAngle);
+}
+
+window.addEventListener('resize', resizeCanvas);
+
+// ═══════════════════════════════════════════════════
+//  DRAW WHEEL
+// ═══════════════════════════════════════════════════
+const N   = PRIZES.length;
+const ARC = (2 * Math.PI) / N;
+let currentAngle = 0;
+
+function drawWheel(rotation) {
+  ctx.clearRect(0, 0, SIZE, SIZE);
+  ctx.save();
+  ctx.translate(CENTER, CENTER);
+  ctx.rotate(rotation);
+
+  for (let i = 0; i < N; i++) {
+    const startA = i * ARC;
+    const endA   = startA + ARC;
+    const prize  = PRIZES[i];
+
+    // Segment fill with subtle gradient
+    const grad = ctx.createRadialGradient(0, 0, RADIUS * 0.15, 0, 0, RADIUS);
+    grad.addColorStop(0, lighten(prize.color, 30));
+    grad.addColorStop(1, prize.color);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, RADIUS, startA, endA);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Segment border
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, RADIUS, startA, endA);
+    ctx.closePath();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(255,255,255,.18)';
+    ctx.stroke();
+
+    // Text
+    ctx.save();
+    ctx.rotate(startA + ARC / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(0,0,0,.6)';
+    ctx.shadowBlur = 4;
+    const fontSize = Math.max(10, SIZE * 0.038);
+    ctx.font = `bold ${fontSize}px 'Segoe UI', system-ui, sans-serif`;
+
+    const text = prize.label;
+    const maxW = RADIUS * 0.62;
+    // Truncate if needed
+    let display = text;
+    while (ctx.measureText(display).width > maxW && display.length > 3) {
+      display = display.slice(0, -1);
+    }
+    if (display.length < text.length) display += '..';
+
+    ctx.fillText(display, RADIUS - 16, fontSize * 0.35);
+    ctx.restore();
+  }
+
+  // Outer rim dots
+  for (let i = 0; i < N; i++) {
+    const a = i * ARC;
+    ctx.beginPath();
+    ctx.arc(
+      Math.cos(a) * (RADIUS - 6),
+      Math.sin(a) * (RADIUS - 6),
+      2.5, 0, Math.PI * 2
+    );
+    ctx.fillStyle = 'rgba(255,255,255,.5)';
+    ctx.fill();
+  }
+
+  // Inner decorative ring
+  ctx.beginPath();
+  ctx.arc(0, 0, RADIUS * 0.18, 0, Math.PI * 2);
+  ctx.fillStyle = '#0d0d24';
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(255,255,255,.2)';
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function lighten(hex, amt) {
+  let r = parseInt(hex.slice(1,3), 16);
+  let g = parseInt(hex.slice(3,5), 16);
+  let b = parseInt(hex.slice(5,7), 16);
+  r = Math.min(255, r + amt);
+  g = Math.min(255, g + amt);
+  b = Math.min(255, b + amt);
+  return `rgb(${r},${g},${b})`;
+}
+
+// ═══════════════════════════════════════════════════
+//  WEIGHTED RANDOM SELECTION
+// ═══════════════════════════════════════════════════
+function weightedRandom() {
+  const total = PRIZES.reduce((s, p) => s + p.probability, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < N; i++) {
+    r -= PRIZES[i].probability;
+    if (r <= 0) return i;
+  }
+  return N - 1;
+}
+
+// ═══════════════════════════════════════════════════
+//  SPIN LOGIC
+// ═══════════════════════════════════════════════════
+let spinning = false;
+const spinBtn      = document.getElementById('spinBtn');
+const overlay      = document.getElementById('overlay');
+const resultEmoji  = document.getElementById('resultEmoji');
+const resultPrize  = document.getElementById('resultPrize');
+const spinAgainBtn = document.getElementById('spinAgainBtn');
+
+spinBtn.addEventListener('click', startSpin);
+spinBtn.addEventListener('touchend', (e) => { e.preventDefault(); startSpin(); });
+spinAgainBtn.addEventListener('click', closeThenSpin);
+
+function startSpin() {
+  if (spinning) return;
+  spinning = true;
+  spinBtn.classList.add('disabled');
+
+  const winIndex = weightedRandom();
+
+  // The pointer is at the top (12 o'clock = -PI/2 in canvas terms).
+  // We need the center of winIndex's segment to land under the pointer.
+  // Segment i center angle = i * ARC + ARC/2.
+  // After rotation, the angle under the pointer (top) corresponds to -PI/2
+  // relative to the canvas coordinate system (where 0 = 3 o'clock).
+  // So we need: rotation + segmentCenter ≡ -PI/2  (mod 2PI)
+  // => rotation = -PI/2 - segmentCenter - (fullSpins * 2PI)
+
+  const segmentCenter = winIndex * ARC + ARC / 2;
+  const fullSpins     = 3 + Math.floor(Math.random() * 3); // 3-5 full rotations
+  const extraRandom   = (Math.random() - 0.5) * ARC * 0.6; // jitter within segment
+  const targetAngle   = -Math.PI / 2 - segmentCenter + extraRandom - fullSpins * 2 * Math.PI;
+
+  // Normalize so we always spin forward (increasing angle = counter-clockwise visually ← we want clockwise)
+  // Actually we want the wheel to spin clockwise. In canvas, positive rotation = CW.
+  // So we want targetAngle < currentAngle to go forward? No — let's just always add big positive.
+  const totalSpin = fullSpins * 2 * Math.PI;
+  // Final resting angle (absolute) where winIndex is under pointer:
+  const restAngle = -(segmentCenter + Math.PI / 2) + extraRandom;
+  // We spin from currentAngle. We want endAngle such that endAngle mod 2PI = restAngle mod 2PI
+  // and endAngle > currentAngle + totalSpin (so it visually spins enough)
+  let endAngle = restAngle;
+  while (endAngle > currentAngle) endAngle -= 2 * Math.PI;
+  endAngle -= totalSpin;
+
+  const startAngle = currentAngle;
+  const delta      = endAngle - startAngle;
+  const duration   = 4000 + Math.random() * 1500; // 4-5.5 seconds
+  const startTime  = performance.now();
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t       = Math.min(elapsed / duration, 1);
+    // Cubic ease-out for satisfying deceleration
+    const eased   = 1 - Math.pow(1 - t, 3);
+    currentAngle  = startAngle + delta * eased;
+    drawWheel(currentAngle);
+
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      currentAngle = endAngle;
+      drawWheel(currentAngle);
+      spinning = false;
+      spinBtn.classList.remove('disabled');
+      showResult(winIndex);
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+// ═══════════════════════════════════════════════════
+//  RESULT DISPLAY
+// ═══════════════════════════════════════════════════
+function showResult(index) {
+  const prize = PRIZES[index];
+  // Extract emoji (first character or first few codepoints)
+  const emojiMatch = prize.label.match(/^(\p{Emoji_Presentation}|\p{Extended_Pictographic})/u);
+  resultEmoji.textContent = emojiMatch ? emojiMatch[0] : '\u{1F3B0}';
+  // Display text without leading emoji
+  const textOnly = prize.label.replace(/^(\p{Emoji_Presentation}|\p{Extended_Pictographic})\s*/u, '');
+  resultPrize.textContent = textOnly || prize.label;
+  resultPrize.style.color = prize.color;
+
+  overlay.classList.add('show');
+
+  // Launch confetti unless it's "Try Again"
+  if (!prize.label.toLowerCase().includes('try again')) {
+    launchConfetti();
+  }
+}
+
+function closeThenSpin() {
+  overlay.classList.remove('show');
+  setTimeout(startSpin, 450);
+}
+
+// Close overlay on outside click
+overlay.addEventListener('click', (e) => {
+  if (e.target === overlay) {
+    overlay.classList.remove('show');
+  }
+});
+
+// ═══════════════════════════════════════════════════
+//  CONFETTI SYSTEM
+// ═══════════════════════════════════════════════════
+const confettiCanvas = document.getElementById('confetti');
+const cCtx           = confettiCanvas.getContext('2d');
+let confettiPieces   = [];
+let confettiRunning  = false;
+
+function resizeConfetti() {
+  confettiCanvas.width  = window.innerWidth;
+  confettiCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeConfetti);
+resizeConfetti();
+
+const CONFETTI_COLORS = [
+  '#ff3864', '#6c5ce7', '#00b894', '#fdcb6e',
+  '#0984e3', '#e17055', '#00cec9', '#ffd700',
+  '#a855f7', '#f472b6', '#34d399', '#fbbf24',
+];
+
+function launchConfetti() {
+  confettiPieces = [];
+  const count = 120;
+  for (let i = 0; i < count; i++) {
+    confettiPieces.push({
+      x: window.innerWidth / 2 + (Math.random() - 0.5) * 200,
+      y: window.innerHeight / 2 - 100,
+      w: Math.random() * 8 + 4,
+      h: Math.random() * 4 + 2,
+      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+      vx: (Math.random() - 0.5) * 16,
+      vy: -(Math.random() * 14 + 4),
+      rotation: Math.random() * 360,
+      rotSpeed: (Math.random() - 0.5) * 12,
+      gravity: 0.18 + Math.random() * 0.08,
+      opacity: 1,
+      decay: 0.003 + Math.random() * 0.004,
+      shape: Math.random() > 0.5 ? 'rect' : 'circle',
+    });
+  }
+  if (!confettiRunning) {
+    confettiRunning = true;
+    animateConfetti();
+  }
+}
+
+function animateConfetti() {
+  cCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+
+  for (let i = confettiPieces.length - 1; i >= 0; i--) {
+    const p = confettiPieces[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += p.gravity;
+    p.vx *= 0.99;
+    p.rotation += p.rotSpeed;
+    p.opacity -= p.decay;
+
+    if (p.opacity <= 0) {
+      confettiPieces.splice(i, 1);
+      continue;
+    }
+
+    cCtx.save();
+    cCtx.translate(p.x, p.y);
+    cCtx.rotate((p.rotation * Math.PI) / 180);
+    cCtx.globalAlpha = p.opacity;
+    cCtx.fillStyle = p.color;
+
+    if (p.shape === 'rect') {
+      cCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    } else {
+      cCtx.beginPath();
+      cCtx.arc(0, 0, p.w / 2, 0, Math.PI * 2);
+      cCtx.fill();
+    }
+    cCtx.restore();
+  }
+
+  if (confettiPieces.length > 0) {
+    requestAnimationFrame(animateConfetti);
+  } else {
+    confettiRunning = false;
+    cCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+resizeCanvas();
+</script>
+</body>
+</html>

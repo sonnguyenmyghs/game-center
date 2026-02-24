@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Hole.io</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #0a0a1a;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #fff;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#gameContainer {
+  position: relative;
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#backBtn {
+  position: absolute;
+  top: 12px; left: 12px;
+  z-index: 100;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s;
+  backdrop-filter: blur(8px);
+}
+#backBtn:hover { background: rgba(255,255,255,0.2); }
+#hud {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 50;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+#hudTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-left: 90px;
+}
+#scoreDisplay {
+  font-size: 18px;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+}
+#sizeDisplay {
+  font-size: 14px;
+  color: #aaa;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+}
+#timerBarWrap {
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+#timerBar {
+  height: 100%;
+  background: linear-gradient(90deg, #ff4444, #ffaa00, #44ff44);
+  border-radius: 3px;
+  transition: width 0.1s linear;
+  width: 100%;
+}
+#timerText {
+  font-size: 13px;
+  text-align: center;
+  color: #ccc;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+#minimap {
+  position: absolute;
+  bottom: 16px; right: 16px;
+  z-index: 50;
+  border: 2px solid rgba(255,255,255,0.25);
+  border-radius: 8px;
+  background: rgba(10,10,26,0.8);
+  pointer-events: none;
+}
+#sizeCompare {
+  position: absolute;
+  bottom: 16px; left: 16px;
+  z-index: 50;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: #ccc;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+#overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 200;
+  background: rgba(10,10,26,0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  backdrop-filter: blur(12px);
+}
+#overlay.hidden { display: none; }
+#overlayTitle {
+  font-size: 36px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ff6b6b, #ffa500, #4ecdc4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+#overlaySubtitle {
+  font-size: 16px;
+  color: #aaa;
+  margin-bottom: 8px;
+}
+.statRow {
+  display: flex;
+  justify-content: space-between;
+  width: 240px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  font-size: 15px;
+}
+.statLabel { color: #888; }
+.statValue { font-weight: 700; color: #fff; }
+.statValue.gold { color: #ffa500; }
+#playBtn {
+  margin-top: 16px;
+  padding: 14px 48px;
+  font-size: 18px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 20px rgba(238,90,36,0.4);
+}
+#playBtn:hover { transform: scale(1.05); box-shadow: 0 6px 28px rgba(238,90,36,0.6); }
+#playBtn:active { transform: scale(0.97); }
+#highScoreDisplay {
+  font-size: 13px;
+  color: #888;
+  margin-top: 4px;
+}
+</style>
+</head>
+<body>
+<div id="gameContainer">
+  <a id="backBtn" href="../index.html">&#8592; Back</a>
+  <div id="hud">
+    <div id="hudTop">
+      <div>
+        <div id="scoreDisplay">Score: 0</div>
+        <div id="sizeDisplay">Size: 1.0x</div>
+      </div>
+      <div id="timerText">60s</div>
+    </div>
+    <div id="timerBarWrap"><div id="timerBar"></div></div>
+  </div>
+  <canvas id="gameCanvas"></canvas>
+  <canvas id="minimap" width="120" height="120"></canvas>
+  <div id="sizeCompare">Tier: Crumb</div>
+  <div id="overlay">
+    <div id="overlayTitle">Hole.io</div>
+    <div id="overlaySubtitle">Devour the city!</div>
+    <button id="playBtn">PLAY</button>
+    <div id="highScoreDisplay"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // --- Constants ---
+  const GAME_DURATION = 60;
+  const WORLD_W = 2400;
+  const WORLD_H = 2400;
+  const ROAD_WIDTH = 60;
+  const BLOCK_SIZE = 200;
+  const GRID_COLS = Math.floor(WORLD_W / BLOCK_SIZE);
+  const GRID_ROWS = Math.floor(WORLD_H / BLOCK_SIZE);
+  const HOLE_MIN_R = 20;
+  const HOLE_MAX_R = 160;
+  const HOLE_SPEED = 4.5;
+  const ABSORB_ANIM_DUR = 300;
+  const SIZE_TIERS = [
+    { name: 'Crumb', minR: 0 },
+    { name: 'Small', minR: 30 },
+    { name: 'Medium', minR: 50 },
+    { name: 'Large', minR: 75 },
+    { name: 'Huge', minR: 100 },
+    { name: 'Massive', minR: 130 },
+    { name: 'TITAN', minR: 155 },
+  ];
+
+  // --- DOM refs ---
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const minimapCanvas = document.getElementById('minimap');
+  const mctx = minimapCanvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlaySubtitle = document.getElementById('overlaySubtitle');
+  const playBtn = document.getElementById('playBtn');
+  const scoreDisplay = document.getElementById('scoreDisplay');
+  const sizeDisplay = document.getElementById('sizeDisplay');
+  const timerBar = document.getElementById('timerBar');
+  const timerText = document.getElementById('timerText');
+  const sizeCompare = document.getElementById('sizeCompare');
+  const highScoreEl = document.getElementById('highScoreDisplay');
+
+  // --- State ---
+  let W, H, dpr;
+  let playing = false;
+  let gameTime = 0;
+  let score = 0;
+  let objectsEaten = 0;
+  let holeX, holeY, holeR, holeTargetR, holeMass;
+  let targetX, targetY, inputActive = false;
+  let objects = [];
+  let particles = [];
+  let cameraX = 0, cameraY = 0;
+  let highScore = parseInt(localStorage.getItem('holeio_highscore')) || 0;
+  let animFrame;
+  let lastTime = 0;
+  let shakeAmount = 0;
+
+  // --- Object types ---
+  const OBJ_TYPES = [
+    // small objects
+    { kind: 'person', w: 6, h: 6, mass: 1, sizeReq: 0, colors: ['#ff6b6b','#ffa07a','#87ceeb','#dda0dd','#f0e68c'] },
+    { kind: 'tree', w: 10, h: 10, mass: 2, sizeReq: 0, colors: ['#2ecc71','#27ae60','#1abc9c','#16a085'] },
+    { kind: 'hydrant', w: 7, h: 10, mass: 2, sizeReq: 0, colors: ['#e74c3c','#c0392b'] },
+    { kind: 'trash', w: 8, h: 10, mass: 2, sizeReq: 0, colors: ['#7f8c8d','#95a5a6'] },
+    { kind: 'sign', w: 5, h: 14, mass: 2, sizeReq: 0, colors: ['#f39c12','#e67e22'] },
+    // medium objects
+    { kind: 'car', w: 20, h: 10, mass: 8, sizeReq: 30, colors: ['#e74c3c','#3498db','#f1c40f','#1abc9c','#9b59b6','#e67e22','#ecf0f1'] },
+    { kind: 'bench', w: 18, h: 8, mass: 5, sizeReq: 28, colors: ['#8B4513','#A0522D','#D2691E'] },
+    { kind: 'bus', w: 30, h: 12, mass: 14, sizeReq: 40, colors: ['#f39c12','#e67e22','#3498db'] },
+    { kind: 'truck', w: 28, h: 12, mass: 12, sizeReq: 38, colors: ['#bdc3c7','#95a5a6','#2c3e50'] },
+    // large objects
+    { kind: 'house', w: 36, h: 36, mass: 30, sizeReq: 60, colors: ['#e8d5b7','#c9b896','#b8a07e','#d4c4a8'] },
+    { kind: 'building', w: 50, h: 50, mass: 60, sizeReq: 85, colors: ['#636e72','#b2bec3','#dfe6e9','#74b9ff'] },
+    { kind: 'tower', w: 40, h: 70, mass: 100, sizeReq: 110, colors: ['#a29bfe','#6c5ce7','#fd79a8'] },
+    { kind: 'skyscraper', w: 55, h: 80, mass: 160, sizeReq: 135, colors: ['#2d3436','#636e72','#00cec9'] },
+  ];
+
+  // --- Resize ---
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // --- Generate objects ---
+  function generateObjects() {
+    objects = [];
+    // Place objects on blocks (avoiding roads)
+    for (let row = 0; row < GRID_ROWS; row++) {
+      for (let col = 0; col < GRID_COLS; col++) {
+        const bx = col * BLOCK_SIZE + ROAD_WIDTH / 2;
+        const by = row * BLOCK_SIZE + ROAD_WIDTH / 2;
+        const bw = BLOCK_SIZE - ROAD_WIDTH;
+        const bh = BLOCK_SIZE - ROAD_WIDTH;
+
+        // Scatter small objects
+        const smallCount = 4 + Math.floor(Math.random() * 5);
+        for (let i = 0; i < smallCount; i++) {
+          const typeIdx = Math.floor(Math.random() * 5); // first 5 are small
+          const t = OBJ_TYPES[typeIdx];
+          spawnObj(t, bx, by, bw, bh);
+        }
+
+        // Medium objects (cars, benches on road edges and blocks)
+        const medCount = 1 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < medCount; i++) {
+          const typeIdx = 5 + Math.floor(Math.random() * 4);
+          const t = OBJ_TYPES[typeIdx];
+          spawnObj(t, bx, by, bw, bh);
+        }
+
+        // Possibly one large object per block
+        if (Math.random() < 0.45) {
+          const typeIdx = 9 + Math.floor(Math.random() * 2);
+          const t = OBJ_TYPES[typeIdx];
+          spawnObj(t, bx + 10, by + 10, bw - 20, bh - 20);
+        }
+      }
+    }
+
+    // Place some vehicles on roads
+    for (let row = 0; row < GRID_ROWS; row++) {
+      for (let col = 0; col < GRID_COLS; col++) {
+        // Horizontal road
+        if (Math.random() < 0.5) {
+          const rx = col * BLOCK_SIZE + BLOCK_SIZE / 2;
+          const ry = row * BLOCK_SIZE + ROAD_WIDTH / 4;
+          const typeIdx = 5 + Math.floor(Math.random() * 4);
+          const t = OBJ_TYPES[typeIdx];
+          const c = t.colors[Math.floor(Math.random() * t.colors.length)];
+          objects.push({
+            x: rx, y: ry, w: t.w, h: t.h,
+            mass: t.mass, sizeReq: t.sizeReq, kind: t.kind,
+            color: c, alive: true, absorbProgress: 0, absorbTime: 0
+          });
+        }
+      }
+    }
+
+    // Add some big buildings and towers scattered
+    for (let i = 0; i < 15; i++) {
+      const typeIdx = 10 + Math.floor(Math.random() * 2);
+      const t = OBJ_TYPES[typeIdx];
+      const c = t.colors[Math.floor(Math.random() * t.colors.length)];
+      objects.push({
+        x: 100 + Math.random() * (WORLD_W - 200),
+        y: 100 + Math.random() * (WORLD_H - 200),
+        w: t.w, h: t.h, mass: t.mass, sizeReq: t.sizeReq, kind: t.kind,
+        color: c, alive: true, absorbProgress: 0, absorbTime: 0
+      });
+    }
+
+    // Skyscrapers
+    for (let i = 0; i < 6; i++) {
+      const t = OBJ_TYPES[12];
+      const c = t.colors[Math.floor(Math.random() * t.colors.length)];
+      objects.push({
+        x: 150 + Math.random() * (WORLD_W - 300),
+        y: 150 + Math.random() * (WORLD_H - 300),
+        w: t.w, h: t.h, mass: t.mass, sizeReq: t.sizeReq, kind: t.kind,
+        color: c, alive: true, absorbProgress: 0, absorbTime: 0
+      });
+    }
+  }
+
+  function spawnObj(t, bx, by, bw, bh) {
+    const c = t.colors[Math.floor(Math.random() * t.colors.length)];
+    const ox = bx + Math.random() * (bw - t.w);
+    const oy = by + Math.random() * (bh - t.h);
+    objects.push({
+      x: ox, y: oy, w: t.w, h: t.h,
+      mass: t.mass, sizeReq: t.sizeReq, kind: t.kind,
+      color: c, alive: true, absorbProgress: 0, absorbTime: 0
+    });
+  }
+
+  // --- Init game ---
+  function startGame() {
+    playing = true;
+    gameTime = GAME_DURATION;
+    score = 0;
+    objectsEaten = 0;
+    holeMass = 0;
+    holeR = HOLE_MIN_R;
+    holeTargetR = HOLE_MIN_R;
+    holeX = WORLD_W / 2;
+    holeY = WORLD_H / 2;
+    targetX = holeX;
+    targetY = holeY;
+    inputActive = false;
+    particles = [];
+    shakeAmount = 0;
+    generateObjects();
+    overlay.classList.add('hidden');
+    lastTime = performance.now();
+    if (animFrame) cancelAnimationFrame(animFrame);
+    loop(lastTime);
+  }
+
+  function endGame() {
+    playing = false;
+    if (score > highScore) {
+      highScore = score;
+      localStorage.setItem('holeio_highscore', highScore);
+    }
+    showGameOver();
+  }
+
+  function showGameOver() {
+    const maxSize = (holeR / HOLE_MIN_R).toFixed(1);
+    const tier = getTierName();
+    overlayTitle.textContent = 'Game Over!';
+    overlaySubtitle.innerHTML = '';
+
+    // Build stats
+    const statsHTML = `
+      <div class="statRow"><span class="statLabel">Score</span><span class="statValue">${score}</span></div>
+      <div class="statRow"><span class="statLabel">Objects Eaten</span><span class="statValue">${objectsEaten}</span></div>
+      <div class="statRow"><span class="statLabel">Max Size</span><span class="statValue">${maxSize}x</span></div>
+      <div class="statRow"><span class="statLabel">Final Tier</span><span class="statValue">${tier}</span></div>
+      <div class="statRow"><span class="statLabel">High Score</span><span class="statValue gold">${highScore}</span></div>
+    `;
+    overlaySubtitle.innerHTML = statsHTML;
+    playBtn.textContent = 'PLAY AGAIN';
+    highScoreEl.textContent = '';
+    overlay.classList.remove('hidden');
+  }
+
+  function showMenu() {
+    overlayTitle.textContent = 'Hole.io';
+    overlaySubtitle.textContent = 'Devour the city!';
+    playBtn.textContent = 'PLAY';
+    highScoreEl.textContent = highScore > 0 ? `High Score: ${highScore}` : '';
+    overlay.classList.remove('hidden');
+  }
+
+  playBtn.addEventListener('click', startGame);
+
+  // --- Input ---
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = (e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0)) - rect.left;
+    const cy = (e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0)) - rect.top;
+    return { cx, cy };
+  }
+
+  function inputToWorld(cx, cy) {
+    return {
+      wx: cx + cameraX,
+      wy: cy + cameraY
+    };
+  }
+
+  canvas.addEventListener('mousedown', e => {
+    if (!playing) return;
+    inputActive = true;
+    const { cx, cy } = getPos(e);
+    const { wx, wy } = inputToWorld(cx, cy);
+    targetX = wx; targetY = wy;
+  });
+  canvas.addEventListener('mousemove', e => {
+    if (!playing) return;
+    const { cx, cy } = getPos(e);
+    const { wx, wy } = inputToWorld(cx, cy);
+    targetX = wx; targetY = wy;
+    inputActive = true;
+  });
+  canvas.addEventListener('mouseup', () => { });
+
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (!playing) return;
+    inputActive = true;
+    const { cx, cy } = getPos(e);
+    const { wx, wy } = inputToWorld(cx, cy);
+    targetX = wx; targetY = wy;
+  }, { passive: false });
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (!playing) return;
+    const { cx, cy } = getPos(e);
+    const { wx, wy } = inputToWorld(cx, cy);
+    targetX = wx; targetY = wy;
+  }, { passive: false });
+  canvas.addEventListener('touchend', e => {
+    e.preventDefault();
+  }, { passive: false });
+
+  // --- Utility ---
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function dist(x1, y1, x2, y2) { return Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2); }
+
+  function getTierName() {
+    let name = SIZE_TIERS[0].name;
+    for (const tier of SIZE_TIERS) {
+      if (holeR >= tier.minR + HOLE_MIN_R) name = tier.name;
+    }
+    return name;
+  }
+
+  function radiusFromMass(mass) {
+    return HOLE_MIN_R + Math.sqrt(mass) * 2.8;
+  }
+
+  // --- Particles ---
+  function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.5 + Math.random() * 2;
+      particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        decay: 0.02 + Math.random() * 0.03,
+        r: 2 + Math.random() * 3,
+        color
+      });
+    }
+  }
+
+  // --- Game loop ---
+  function loop(timestamp) {
+    const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+    lastTime = timestamp;
+
+    if (playing) {
+      gameTime -= dt;
+      if (gameTime <= 0) {
+        gameTime = 0;
+        endGame();
+      }
+      update(dt);
+    }
+
+    render();
+    renderMinimap();
+    updateHUD();
+
+    animFrame = requestAnimationFrame(loop);
+  }
+
+  function update(dt) {
+    // Move hole towards target
+    const dx = targetX - holeX;
+    const dy = targetY - holeY;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    const speed = HOLE_SPEED * (1 + holeR * 0.008);
+    if (d > 2) {
+      const moveX = (dx / d) * Math.min(speed, d * 0.08);
+      const moveY = (dy / d) * Math.min(speed, d * 0.08);
+      holeX += moveX;
+      holeY += moveY;
+    }
+
+    // Clamp to world
+    holeX = clamp(holeX, holeR, WORLD_W - holeR);
+    holeY = clamp(holeY, holeR, WORLD_H - holeR);
+
+    // Smooth hole size
+    holeTargetR = clamp(radiusFromMass(holeMass), HOLE_MIN_R, HOLE_MAX_R);
+    holeR = lerp(holeR, holeTargetR, 0.06);
+
+    // Check absorb
+    for (const obj of objects) {
+      if (!obj.alive) continue;
+
+      // Check if object is within hole
+      const objCX = obj.x + obj.w / 2;
+      const objCY = obj.y + obj.h / 2;
+      const objR = Math.max(obj.w, obj.h) / 2;
+      const d = dist(holeX, holeY, objCX, objCY);
+
+      if (obj.absorbProgress > 0) {
+        // Absorbing animation
+        obj.absorbTime += dt * 1000;
+        obj.absorbProgress = Math.min(1, obj.absorbTime / ABSORB_ANIM_DUR);
+        // Pull toward hole
+        obj.x = lerp(obj.x, holeX - obj.w / 2, 0.15);
+        obj.y = lerp(obj.y, holeY - obj.h / 2, 0.15);
+        if (obj.absorbProgress >= 1) {
+          obj.alive = false;
+          holeMass += obj.mass;
+          score += Math.ceil(obj.mass);
+          objectsEaten++;
+          spawnParticles(holeX, holeY, obj.color, Math.min(8, Math.ceil(obj.mass / 3)));
+          shakeAmount = Math.min(5, obj.mass * 0.15);
+        }
+        continue;
+      }
+
+      // Can we absorb this?
+      if (holeR > obj.sizeReq + HOLE_MIN_R * 0.5 && d < holeR - objR * 0.3) {
+        obj.absorbProgress = 0.01;
+        obj.absorbTime = 0;
+      }
+    }
+
+    // Update particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= p.decay;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    // Shake decay
+    shakeAmount *= 0.9;
+    if (shakeAmount < 0.1) shakeAmount = 0;
+  }
+
+  // --- Render ---
+  function render() {
+    // Camera
+    cameraX = holeX - W / 2;
+    cameraY = holeY - H / 2;
+
+    // Screen shake
+    let shakeX = 0, shakeY = 0;
+    if (shakeAmount > 0.1) {
+      shakeX = (Math.random() - 0.5) * shakeAmount * 2;
+      shakeY = (Math.random() - 0.5) * shakeAmount * 2;
+    }
+
+    ctx.save();
+    ctx.clearRect(0, 0, W, H);
+
+    // Background
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.translate(-cameraX + shakeX, -cameraY + shakeY);
+
+    // Draw city grid
+    drawCityGrid();
+
+    // Draw objects
+    drawObjects();
+
+    // Draw hole
+    drawHole();
+
+    // Draw particles
+    drawParticles();
+
+    ctx.restore();
+    ctx.restore();
+  }
+
+  function drawCityGrid() {
+    // Fill blocks (green-ish areas)
+    for (let row = 0; row < GRID_ROWS; row++) {
+      for (let col = 0; col < GRID_COLS; col++) {
+        const bx = col * BLOCK_SIZE + ROAD_WIDTH / 2;
+        const by = row * BLOCK_SIZE + ROAD_WIDTH / 2;
+        const bw = BLOCK_SIZE - ROAD_WIDTH;
+        const bh = BLOCK_SIZE - ROAD_WIDTH;
+
+        // Only draw visible blocks
+        if (bx + bw < cameraX - 50 || bx > cameraX + W + 50 ||
+            by + bh < cameraY - 50 || by > cameraY + H + 50) continue;
+
+        // Block fill - slight variation
+        const shade = ((row * 7 + col * 13) % 3);
+        const colors = ['#1e3a1e', '#1a3520', '#1c381c'];
+        ctx.fillStyle = colors[shade];
+        ctx.fillRect(bx, by, bw, bh);
+
+        // Inner grass texture lines
+        ctx.strokeStyle = 'rgba(50,120,50,0.15)';
+        ctx.lineWidth = 1;
+        for (let l = 0; l < bw; l += 16) {
+          ctx.beginPath();
+          ctx.moveTo(bx + l, by);
+          ctx.lineTo(bx + l, by + bh);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Roads
+    ctx.fillStyle = '#2a2a3e';
+    // Horizontal roads
+    for (let row = 0; row <= GRID_ROWS; row++) {
+      const ry = row * BLOCK_SIZE - ROAD_WIDTH / 2;
+      if (ry + ROAD_WIDTH < cameraY - 10 || ry > cameraY + H + 10) continue;
+      ctx.fillRect(0, ry, WORLD_W, ROAD_WIDTH);
+    }
+    // Vertical roads
+    for (let col = 0; col <= GRID_COLS; col++) {
+      const rx = col * BLOCK_SIZE - ROAD_WIDTH / 2;
+      if (rx + ROAD_WIDTH < cameraX - 10 || rx > cameraX + W + 10) continue;
+      ctx.fillRect(rx, 0, ROAD_WIDTH, WORLD_H);
+    }
+
+    // Road center lines (dashed)
+    ctx.strokeStyle = 'rgba(255,255,100,0.2)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([12, 18]);
+    for (let row = 0; row <= GRID_ROWS; row++) {
+      const ry = row * BLOCK_SIZE;
+      if (ry < cameraY - 10 || ry > cameraY + H + 10) continue;
+      ctx.beginPath();
+      ctx.moveTo(Math.max(0, cameraX - 20), ry);
+      ctx.lineTo(Math.min(WORLD_W, cameraX + W + 20), ry);
+      ctx.stroke();
+    }
+    for (let col = 0; col <= GRID_COLS; col++) {
+      const rx = col * BLOCK_SIZE;
+      if (rx < cameraX - 10 || rx > cameraX + W + 10) continue;
+      ctx.beginPath();
+      ctx.moveTo(rx, Math.max(0, cameraY - 20));
+      ctx.lineTo(rx, Math.min(WORLD_H, cameraY + H + 20));
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // Sidewalk edges
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    for (let row = 0; row < GRID_ROWS; row++) {
+      for (let col = 0; col < GRID_COLS; col++) {
+        const bx = col * BLOCK_SIZE + ROAD_WIDTH / 2;
+        const by = row * BLOCK_SIZE + ROAD_WIDTH / 2;
+        const bw = BLOCK_SIZE - ROAD_WIDTH;
+        const bh = BLOCK_SIZE - ROAD_WIDTH;
+        if (bx + bw < cameraX - 50 || bx > cameraX + W + 50 ||
+            by + bh < cameraY - 50 || by > cameraY + H + 50) continue;
+        ctx.strokeRect(bx, by, bw, bh);
+      }
+    }
+
+    // World border
+    ctx.strokeStyle = 'rgba(255,100,100,0.3)';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(0, 0, WORLD_W, WORLD_H);
+  }
+
+  function drawObjects() {
+    for (const obj of objects) {
+      if (!obj.alive && obj.absorbProgress >= 1) continue;
+
+      const ox = obj.x;
+      const oy = obj.y;
+
+      // Culling
+      if (ox + obj.w < cameraX - 50 || ox > cameraX + W + 50 ||
+          oy + obj.h < cameraY - 50 || oy > cameraY + H + 50) continue;
+
+      ctx.save();
+
+      // Absorb animation: shrink + pull
+      if (obj.absorbProgress > 0) {
+        const scale = 1 - obj.absorbProgress;
+        const cx = ox + obj.w / 2;
+        const cy = oy + obj.h / 2;
+        ctx.translate(cx, cy);
+        ctx.scale(scale, scale);
+        ctx.rotate(obj.absorbProgress * Math.PI);
+        ctx.translate(-cx, -cy);
+        ctx.globalAlpha = 1 - obj.absorbProgress * 0.5;
+      }
+
+      // Can the hole eat this? Show outline
+      const canEat = holeR > obj.sizeReq + HOLE_MIN_R * 0.5;
+      const tooSmall = !canEat && obj.sizeReq > 0;
+
+      // Draw based on kind
+      drawObjectShape(obj, canEat, tooSmall);
+
+      ctx.restore();
+    }
+  }
+
+  function drawObjectShape(obj, canEat, tooSmall) {
+    const x = obj.x, y = obj.y, w = obj.w, h = obj.h;
+
+    ctx.fillStyle = obj.color;
+
+    switch (obj.kind) {
+      case 'person':
+        // Circle head + body
+        ctx.beginPath();
+        ctx.arc(x + w/2, y + h*0.3, w*0.35, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillRect(x + w*0.2, y + h*0.4, w*0.6, h*0.55);
+        break;
+      case 'tree':
+        // Trunk
+        ctx.fillStyle = '#6d4c21';
+        ctx.fillRect(x + w*0.35, y + h*0.5, w*0.3, h*0.5);
+        // Canopy
+        ctx.fillStyle = obj.color;
+        ctx.beginPath();
+        ctx.arc(x + w/2, y + h*0.35, w*0.5, 0, Math.PI*2);
+        ctx.fill();
+        break;
+      case 'hydrant':
+        ctx.beginPath();
+        ctx.arc(x + w/2, y + h*0.35, w*0.45, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillRect(x + w*0.2, y + h*0.3, w*0.6, h*0.65);
+        break;
+      case 'trash':
+        ctx.fillRect(x, y + h*0.15, w, h*0.85);
+        ctx.fillStyle = lighten(obj.color, 30);
+        ctx.fillRect(x, y, w, h*0.25);
+        break;
+      case 'sign':
+        ctx.fillStyle = '#777';
+        ctx.fillRect(x + w*0.35, y + h*0.3, w*0.3, h*0.7);
+        ctx.fillStyle = obj.color;
+        ctx.fillRect(x, y, w, h*0.35);
+        break;
+      case 'car':
+        // Car body
+        const r = 3;
+        roundRect(ctx, x, y + h*0.15, w, h*0.7, r);
+        ctx.fill();
+        // Windows
+        ctx.fillStyle = 'rgba(100,200,255,0.5)';
+        ctx.fillRect(x + w*0.15, y + h*0.2, w*0.25, h*0.35);
+        ctx.fillRect(x + w*0.55, y + h*0.2, w*0.25, h*0.35);
+        // Wheels
+        ctx.fillStyle = '#222';
+        ctx.beginPath();
+        ctx.arc(x + w*0.22, y + h*0.85, h*0.17, 0, Math.PI*2);
+        ctx.arc(x + w*0.78, y + h*0.85, h*0.17, 0, Math.PI*2);
+        ctx.fill();
+        break;
+      case 'bench':
+        ctx.fillRect(x, y + h*0.2, w, h*0.3);
+        ctx.fillStyle = lighten(obj.color, -20);
+        ctx.fillRect(x + w*0.05, y + h*0.5, w*0.08, h*0.5);
+        ctx.fillRect(x + w*0.87, y + h*0.5, w*0.08, h*0.5);
+        break;
+      case 'bus':
+        roundRect(ctx, x, y, w, h, 4);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(100,200,255,0.4)';
+        for (let i = 0; i < 4; i++) {
+          ctx.fillRect(x + w*0.08 + i * w*0.22, y + h*0.15, w*0.15, h*0.35);
+        }
+        ctx.fillStyle = '#222';
+        ctx.beginPath();
+        ctx.arc(x + w*0.18, y + h*0.95, h*0.14, 0, Math.PI*2);
+        ctx.arc(x + w*0.82, y + h*0.95, h*0.14, 0, Math.PI*2);
+        ctx.fill();
+        break;
+      case 'truck':
+        ctx.fillRect(x, y + h*0.1, w*0.65, h*0.8);
+        ctx.fillStyle = lighten(obj.color, 20);
+        ctx.fillRect(x + w*0.65, y, w*0.35, h*0.9);
+        ctx.fillStyle = 'rgba(100,200,255,0.4)';
+        ctx.fillRect(x + w*0.7, y + h*0.1, w*0.25, h*0.35);
+        ctx.fillStyle = '#222';
+        ctx.beginPath();
+        ctx.arc(x + w*0.2, y + h*0.95, h*0.14, 0, Math.PI*2);
+        ctx.arc(x + w*0.8, y + h*0.95, h*0.14, 0, Math.PI*2);
+        ctx.fill();
+        break;
+      case 'house':
+        // Walls
+        ctx.fillRect(x + w*0.05, y + h*0.35, w*0.9, h*0.65);
+        // Roof
+        ctx.fillStyle = darken(obj.color, 40);
+        ctx.beginPath();
+        ctx.moveTo(x, y + h*0.38);
+        ctx.lineTo(x + w/2, y);
+        ctx.lineTo(x + w, y + h*0.38);
+        ctx.closePath();
+        ctx.fill();
+        // Door
+        ctx.fillStyle = '#5D4037';
+        ctx.fillRect(x + w*0.4, y + h*0.6, w*0.2, h*0.4);
+        // Window
+        ctx.fillStyle = 'rgba(255,255,150,0.5)';
+        ctx.fillRect(x + w*0.15, y + h*0.45, w*0.2, h*0.18);
+        ctx.fillRect(x + w*0.65, y + h*0.45, w*0.2, h*0.18);
+        break;
+      case 'building':
+        ctx.fillRect(x, y, w, h);
+        // Windows grid
+        ctx.fillStyle = 'rgba(255,255,200,0.35)';
+        const wSize = w * 0.1;
+        const gap = w * 0.06;
+        for (let wy = 0; wy < 5; wy++) {
+          for (let wx = 0; wx < 4; wx++) {
+            ctx.fillRect(
+              x + gap + wx * (wSize + gap),
+              y + gap + wy * (wSize + gap * 0.8),
+              wSize, wSize * 0.8
+            );
+          }
+        }
+        // Top accent
+        ctx.fillStyle = darken(obj.color, 30);
+        ctx.fillRect(x, y, w, h*0.05);
+        break;
+      case 'tower':
+        ctx.fillRect(x + w*0.1, y, w*0.8, h);
+        ctx.fillStyle = darken(obj.color, 20);
+        ctx.fillRect(x, y + h*0.85, w, h*0.15);
+        // Windows
+        ctx.fillStyle = 'rgba(255,255,200,0.3)';
+        for (let wy = 0; wy < 8; wy++) {
+          for (let wx = 0; wx < 3; wx++) {
+            ctx.fillRect(
+              x + w*0.2 + wx * w*0.22,
+              y + h*0.04 + wy * h*0.11,
+              w*0.14, h*0.06
+            );
+          }
+        }
+        // Antenna
+        ctx.fillStyle = '#888';
+        ctx.fillRect(x + w*0.47, y - h*0.12, w*0.06, h*0.12);
+        break;
+      case 'skyscraper':
+        ctx.fillRect(x + w*0.05, y, w*0.9, h);
+        ctx.fillStyle = lighten(obj.color, 15);
+        ctx.fillRect(x + w*0.15, y, w*0.1, h);
+        ctx.fillRect(x + w*0.75, y, w*0.1, h);
+        // Windows
+        ctx.fillStyle = 'rgba(100,255,255,0.2)';
+        for (let wy = 0; wy < 10; wy++) {
+          for (let wx = 0; wx < 4; wx++) {
+            ctx.fillRect(
+              x + w*0.12 + wx * w*0.19,
+              y + h*0.03 + wy * h*0.09,
+              w*0.12, h*0.05
+            );
+          }
+        }
+        // Crown
+        ctx.fillStyle = darken(obj.color, 30);
+        ctx.beginPath();
+        ctx.moveTo(x + w*0.05, y);
+        ctx.lineTo(x + w*0.3, y - h*0.06);
+        ctx.lineTo(x + w*0.5, y);
+        ctx.lineTo(x + w*0.7, y - h*0.06);
+        ctx.lineTo(x + w*0.95, y);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      default:
+        ctx.fillRect(x, y, w, h);
+    }
+
+    // Size indicator for too-large objects
+    if (tooSmall && obj.absorbProgress === 0) {
+      ctx.strokeStyle = 'rgba(255,80,80,0.35)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x - 2, y - 2, w + 4, h + 4);
+    }
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function lighten(hex, amt) {
+    let r = parseInt(hex.slice(1,3),16);
+    let g = parseInt(hex.slice(3,5),16);
+    let b = parseInt(hex.slice(5,7),16);
+    r = clamp(r + amt, 0, 255);
+    g = clamp(g + amt, 0, 255);
+    b = clamp(b + amt, 0, 255);
+    return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+  }
+
+  function darken(hex, amt) {
+    return lighten(hex, -amt);
+  }
+
+  function drawHole() {
+    ctx.save();
+
+    // Shadow
+    ctx.beginPath();
+    ctx.arc(holeX, holeY, holeR + 6, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fill();
+
+    // Hole gradient
+    const grad = ctx.createRadialGradient(holeX, holeY, 0, holeX, holeY, holeR);
+    grad.addColorStop(0, '#000000');
+    grad.addColorStop(0.6, '#050510');
+    grad.addColorStop(0.85, '#0a0a20');
+    grad.addColorStop(1, 'rgba(20,20,50,0.7)');
+
+    ctx.beginPath();
+    ctx.arc(holeX, holeY, holeR, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Edge glow
+    ctx.beginPath();
+    ctx.arc(holeX, holeY, holeR, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(80,60,140,0.4)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Inner swirl effect
+    const time = performance.now() / 1000;
+    ctx.save();
+    ctx.clip();
+    for (let i = 0; i < 3; i++) {
+      const angle = time * (1 + i * 0.3) + i * 2.1;
+      const sr = holeR * 0.6;
+      const sx = holeX + Math.cos(angle) * sr * 0.3;
+      const sy = holeY + Math.sin(angle) * sr * 0.3;
+      const sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, holeR * 0.5);
+      sg.addColorStop(0, 'rgba(60,40,100,0.15)');
+      sg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = sg;
+      ctx.fillRect(holeX - holeR, holeY - holeR, holeR * 2, holeR * 2);
+    }
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  function drawParticles() {
+    for (const p of particles) {
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // --- Minimap ---
+  function renderMinimap() {
+    const mw = 120, mh = 120;
+    const sx = mw / WORLD_W;
+    const sy = mh / WORLD_H;
+
+    mctx.clearRect(0, 0, mw, mh);
+    mctx.fillStyle = '#0d0d20';
+    mctx.fillRect(0, 0, mw, mh);
+
+    // Grid blocks
+    mctx.fillStyle = '#1a3018';
+    for (let row = 0; row < GRID_ROWS; row++) {
+      for (let col = 0; col < GRID_COLS; col++) {
+        const bx = (col * BLOCK_SIZE + ROAD_WIDTH / 2) * sx;
+        const by = (row * BLOCK_SIZE + ROAD_WIDTH / 2) * sy;
+        const bw = (BLOCK_SIZE - ROAD_WIDTH) * sx;
+        const bh = (BLOCK_SIZE - ROAD_WIDTH) * sy;
+        mctx.fillRect(bx, by, bw, bh);
+      }
+    }
+
+    // Objects as dots
+    for (const obj of objects) {
+      if (!obj.alive) continue;
+      mctx.fillStyle = obj.sizeReq > 60 ? 'rgba(200,200,200,0.5)' : 'rgba(150,150,150,0.3)';
+      const size = Math.max(1, Math.sqrt(obj.mass) * 0.6);
+      mctx.fillRect(obj.x * sx, obj.y * sy, size, size);
+    }
+
+    // Hole
+    mctx.fillStyle = '#ff4444';
+    mctx.beginPath();
+    mctx.arc(holeX * sx, holeY * sy, Math.max(2, holeR * sx * 1.5), 0, Math.PI * 2);
+    mctx.fill();
+
+    // Viewport rectangle
+    mctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    mctx.lineWidth = 1;
+    mctx.strokeRect(
+      cameraX * sx, cameraY * sy,
+      W * sx, H * sy
+    );
+
+    // Border
+    mctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    mctx.lineWidth = 1;
+    mctx.strokeRect(0, 0, mw, mh);
+  }
+
+  // --- HUD ---
+  function updateHUD() {
+    if (!playing) return;
+    scoreDisplay.textContent = `Score: ${score}`;
+    const sizeMultiplier = (holeR / HOLE_MIN_R).toFixed(1);
+    sizeDisplay.textContent = `Size: ${sizeMultiplier}x`;
+    timerBar.style.width = (gameTime / GAME_DURATION * 100) + '%';
+    timerText.textContent = Math.ceil(gameTime) + 's';
+    sizeCompare.textContent = `Tier: ${getTierName()}`;
+
+    // Timer color urgency
+    if (gameTime < 10) {
+      timerBar.style.background = 'linear-gradient(90deg, #ff2222, #ff4444)';
+      timerText.style.color = '#ff6666';
+    } else if (gameTime < 20) {
+      timerBar.style.background = 'linear-gradient(90deg, #ff6644, #ffaa00)';
+      timerText.style.color = '#ffaa66';
+    } else {
+      timerBar.style.background = 'linear-gradient(90deg, #ff4444, #ffaa00, #44ff44)';
+      timerText.style.color = '#ccc';
+    }
+  }
+
+  // --- Start ---
+  showMenu();
+  // Start rendering even on menu
+  holeX = WORLD_W / 2;
+  holeY = WORLD_H / 2;
+  holeR = HOLE_MIN_R;
+  holeTargetR = HOLE_MIN_R;
+  holeMass = 0;
+  generateObjects();
+  lastTime = performance.now();
+  loop(lastTime);
+
+})();
+</script>
+</body>
+</html>

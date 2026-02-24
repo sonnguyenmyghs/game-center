@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Whack-a-Mole</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a1a;
+      color: #fff;
+      min-height: 100vh;
+      overflow-x: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="24" font-size="24">🔨</text></svg>') 8 4, auto;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(34, 139, 34, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 60%, rgba(139, 90, 43, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 90%, rgba(34, 100, 34, 0.08) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 12px 16px 40px;
+    }
+
+    /* Back button */
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      margin-bottom: 12px;
+    }
+
+    .back-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .back-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    /* Title */
+    .title {
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #8B4513, #DAA520, #228B22, #8B4513);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradientShift 4s ease infinite;
+      margin-bottom: 4px;
+      letter-spacing: -0.5px;
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    /* HUD */
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 12px 0 8px;
+      gap: 12px;
+    }
+
+    .hud-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 70px;
+    }
+
+    .hud-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 2px;
+    }
+
+    .hud-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hud-value.score-display {
+      color: #ffd700;
+    }
+
+    .hud-value.timer-display {
+      color: #4ade80;
+    }
+
+    .hud-value.combo-display {
+      color: #ff6b6b;
+      font-size: 1.2rem;
+    }
+
+    /* Timer bar */
+    .timer-bar-container {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .timer-bar {
+      height: 100%;
+      width: 100%;
+      border-radius: 4px;
+      background: #4ade80;
+      transition: width 0.1s linear, background-color 0.5s ease;
+    }
+
+    .timer-bar.warning {
+      background: #fbbf24;
+    }
+
+    .timer-bar.danger {
+      background: #ef4444;
+      animation: pulse-bar 0.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse-bar {
+      from { opacity: 0.7; }
+      to { opacity: 1; }
+    }
+
+    /* Game board */
+    .game-board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      padding: 24px;
+      background: linear-gradient(145deg, #2d5a1e, #1a3d0f);
+      border-radius: 20px;
+      border: 3px solid #3d7a2a;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.05);
+      position: relative;
+    }
+
+    /* Grass texture dots */
+    .game-board::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 17px;
+      background-image:
+        radial-gradient(circle at 20% 30%, rgba(76, 175, 80, 0.2) 1px, transparent 1px),
+        radial-gradient(circle at 60% 70%, rgba(76, 175, 80, 0.15) 1px, transparent 1px),
+        radial-gradient(circle at 80% 20%, rgba(76, 175, 80, 0.2) 1px, transparent 1px),
+        radial-gradient(circle at 40% 80%, rgba(76, 175, 80, 0.15) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    /* Hole */
+    .hole {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="24" font-size="24">🔨</text></svg>') 8 4, pointer;
+    }
+
+    .hole-dirt {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      height: 40%;
+      background: radial-gradient(ellipse at center, #3a2211 0%, #2a1a0a 60%, transparent 72%);
+      border-radius: 50%;
+      z-index: 2;
+    }
+
+    .hole-front {
+      position: absolute;
+      bottom: -4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 96%;
+      height: 24%;
+      background: linear-gradient(to top, #4a3220, #3a2211);
+      border-radius: 0 0 50% 50% / 0 0 100% 100%;
+      z-index: 4;
+    }
+
+    .hole-shadow {
+      position: absolute;
+      bottom: 4%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80%;
+      height: 30%;
+      background: radial-gradient(ellipse, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, transparent 70%);
+      border-radius: 50%;
+      z-index: 1;
+    }
+
+    /* Mole container - clips the mole */
+    .mole-container {
+      position: absolute;
+      bottom: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 70%;
+      height: 80%;
+      overflow: hidden;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    /* Mole */
+    .mole {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%) translateY(100%);
+      width: 80%;
+      aspect-ratio: 1;
+      pointer-events: none;
+      transition: none;
+    }
+
+    .mole.active {
+      pointer-events: auto;
+      animation: molePopUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    .mole.hiding {
+      animation: moleHide 0.2s ease-in forwards;
+      pointer-events: none;
+    }
+
+    .mole.whacked {
+      animation: moleWhacked 0.25s ease-in forwards;
+      pointer-events: none;
+    }
+
+    @keyframes molePopUp {
+      0% { transform: translateX(-50%) translateY(100%); }
+      60% { transform: translateX(-50%) translateY(-15%); }
+      80% { transform: translateX(-50%) translateY(5%); }
+      100% { transform: translateX(-50%) translateY(0%); }
+    }
+
+    @keyframes moleHide {
+      0% { transform: translateX(-50%) translateY(0%); }
+      100% { transform: translateX(-50%) translateY(100%); }
+    }
+
+    @keyframes moleWhacked {
+      0% { transform: translateX(-50%) translateY(0%) scale(1); }
+      30% { transform: translateX(-50%) translateY(-10%) scale(1.15); }
+      100% { transform: translateX(-50%) translateY(100%) scale(0.5); opacity: 0.3; }
+    }
+
+    /* Mole face */
+    .mole-body {
+      width: 100%;
+      height: 100%;
+      border-radius: 50% 50% 45% 45%;
+      background: radial-gradient(circle at 40% 35%, #c4884d, #8B5E3C);
+      position: relative;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Eyes */
+    .mole-body::before,
+    .mole-body::after {
+      content: '';
+      position: absolute;
+      width: 18%;
+      height: 18%;
+      background: #1a1a1a;
+      border-radius: 50%;
+      top: 32%;
+    }
+
+    .mole-body::before {
+      left: 25%;
+    }
+
+    .mole-body::after {
+      right: 25%;
+    }
+
+    /* Eye shine */
+    .mole-eye-shine {
+      position: absolute;
+      width: 7%;
+      height: 7%;
+      background: #fff;
+      border-radius: 50%;
+      top: 33%;
+      z-index: 1;
+    }
+
+    .mole-eye-shine.left {
+      left: 29%;
+    }
+
+    .mole-eye-shine.right {
+      right: 29%;
+    }
+
+    /* Nose */
+    .mole-nose {
+      position: absolute;
+      width: 16%;
+      height: 12%;
+      background: #d4626e;
+      border-radius: 50%;
+      top: 48%;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    /* Cheeks */
+    .mole-cheek {
+      position: absolute;
+      width: 16%;
+      height: 10%;
+      background: rgba(255, 150, 150, 0.35);
+      border-radius: 50%;
+      top: 52%;
+    }
+
+    .mole-cheek.left {
+      left: 12%;
+    }
+
+    .mole-cheek.right {
+      right: 12%;
+    }
+
+    /* Mouth */
+    .mole-mouth {
+      position: absolute;
+      width: 24%;
+      height: 8%;
+      border-bottom: 2.5px solid #5a3a28;
+      border-radius: 0 0 50% 50%;
+      top: 60%;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    /* Whiskers */
+    .mole-whisker {
+      position: absolute;
+      width: 22%;
+      height: 1.5px;
+      background: rgba(90, 58, 40, 0.5);
+      top: 53%;
+    }
+
+    .mole-whisker.left-top {
+      left: -5%;
+      transform: rotate(-10deg);
+    }
+
+    .mole-whisker.left-bottom {
+      left: -5%;
+      top: 58%;
+      transform: rotate(10deg);
+    }
+
+    .mole-whisker.right-top {
+      right: -5%;
+      transform: rotate(10deg);
+    }
+
+    .mole-whisker.right-bottom {
+      right: -5%;
+      top: 58%;
+      transform: rotate(-10deg);
+    }
+
+    /* Golden mole */
+    .mole.golden .mole-body {
+      background: radial-gradient(circle at 40% 35%, #ffd700, #daa520);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.6), 0 4px 8px rgba(0, 0, 0, 0.3);
+      animation: goldenGlow 0.6s ease-in-out infinite alternate;
+    }
+
+    @keyframes goldenGlow {
+      from { box-shadow: 0 0 10px rgba(255, 215, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.3); }
+      to { box-shadow: 0 0 25px rgba(255, 215, 0, 0.8), 0 4px 8px rgba(0, 0, 0, 0.3); }
+    }
+
+    /* Sparkle on golden mole */
+    .sparkle {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: #fff;
+      border-radius: 50%;
+      animation: sparkle 0.8s ease-in-out infinite;
+      z-index: 5;
+    }
+
+    .sparkle:nth-child(1) { top: 15%; left: 20%; animation-delay: 0s; }
+    .sparkle:nth-child(2) { top: 10%; right: 15%; animation-delay: 0.3s; }
+    .sparkle:nth-child(3) { top: 40%; right: 5%; animation-delay: 0.5s; }
+
+    @keyframes sparkle {
+      0%, 100% { opacity: 0; transform: scale(0); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Bomb */
+    .mole.bomb .mole-body {
+      background: radial-gradient(circle at 35% 30%, #555, #1a1a1a);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .mole.bomb .mole-body::before,
+    .mole.bomb .mole-body::after {
+      display: none;
+    }
+
+    .mole.bomb .mole-nose,
+    .mole.bomb .mole-cheek,
+    .mole.bomb .mole-mouth,
+    .mole.bomb .mole-whisker,
+    .mole.bomb .mole-eye-shine {
+      display: none;
+    }
+
+    /* Bomb fuse */
+    .bomb-fuse {
+      display: none;
+      position: absolute;
+      top: -10%;
+      left: 50%;
+      width: 3px;
+      height: 20%;
+      background: #8B7355;
+      transform: translateX(-50%) rotate(15deg);
+      transform-origin: bottom center;
+      border-radius: 2px;
+    }
+
+    .bomb-fuse::after {
+      content: '';
+      position: absolute;
+      top: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      height: 8px;
+      background: radial-gradient(circle, #ff6b35, #ff4500);
+      border-radius: 50%;
+      animation: fuseBurn 0.3s ease-in-out infinite alternate;
+    }
+
+    @keyframes fuseBurn {
+      from { opacity: 0.7; transform: translateX(-50%) scale(0.8); }
+      to { opacity: 1; transform: translateX(-50%) scale(1.2); }
+    }
+
+    .mole.bomb .bomb-fuse {
+      display: block;
+    }
+
+    /* Bomb X eyes */
+    .bomb-eye {
+      display: none;
+      position: absolute;
+      top: 30%;
+      width: 18%;
+      height: 18%;
+      z-index: 1;
+    }
+
+    .bomb-eye::before,
+    .bomb-eye::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 3px;
+      background: #ff4444;
+      top: 50%;
+      left: 0;
+      border-radius: 2px;
+    }
+
+    .bomb-eye::before { transform: rotate(45deg); }
+    .bomb-eye::after { transform: rotate(-45deg); }
+
+    .bomb-eye.left { left: 22%; }
+    .bomb-eye.right { right: 22%; }
+
+    .mole.bomb .bomb-eye {
+      display: block;
+    }
+
+    /* Bomb skull symbol */
+    .bomb-skull {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.2em;
+      color: #ff4444;
+      font-weight: bold;
+    }
+
+    .mole.bomb .bomb-skull {
+      display: block;
+    }
+
+    /* Whack effect - stars burst */
+    .whack-effect {
+      position: absolute;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .whack-star {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: #ffd700;
+      clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+      animation: starBurst 0.5s ease-out forwards;
+    }
+
+    @keyframes starBurst {
+      0% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+      }
+    }
+
+    /* Red flash for bomb hit */
+    .bomb-flash {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 0, 0, 0.3);
+      z-index: 100;
+      pointer-events: none;
+      animation: bombFlash 0.3s ease-out forwards;
+    }
+
+    @keyframes bombFlash {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* Score popup */
+    .score-popup {
+      position: absolute;
+      font-size: 1.3rem;
+      font-weight: 800;
+      pointer-events: none;
+      z-index: 20;
+      animation: scoreFloat 0.8s ease-out forwards;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      white-space: nowrap;
+    }
+
+    .score-popup.positive {
+      color: #4ade80;
+    }
+
+    .score-popup.golden-score {
+      color: #ffd700;
+      font-size: 1.6rem;
+    }
+
+    .score-popup.negative {
+      color: #ef4444;
+    }
+
+    @keyframes scoreFloat {
+      0% {
+        transform: translateY(0) scale(0.5);
+        opacity: 1;
+      }
+      20% {
+        transform: translateY(-10px) scale(1.2);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(-60px) scale(0.8);
+        opacity: 0;
+      }
+    }
+
+    /* Combo text */
+    .combo-popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: #ff6b6b;
+      text-shadow: 0 0 20px rgba(255, 107, 107, 0.5), 0 3px 6px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+      z-index: 50;
+      animation: comboScale 0.6s ease-out forwards;
+      white-space: nowrap;
+    }
+
+    @keyframes comboScale {
+      0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+      30% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+      50% { transform: translate(-50%, -50%) scale(0.95); opacity: 1; }
+      70% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+    }
+
+    /* Start screen */
+    .screen-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 10, 26, 0.92);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    .screen-overlay.hidden {
+      display: none;
+    }
+
+    .screen-content {
+      text-align: center;
+      padding: 32px 24px;
+      max-width: 360px;
+      width: 90%;
+    }
+
+    .screen-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #8B4513, #DAA520, #228B22);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradientShift 3s ease infinite;
+      margin-bottom: 8px;
+    }
+
+    .screen-subtitle {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.9rem;
+      margin-bottom: 28px;
+    }
+
+    .screen-emoji {
+      font-size: 4rem;
+      margin-bottom: 16px;
+      animation: bounce 1.5s ease infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 40px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #fff;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-play {
+      background: linear-gradient(135deg, #228B22, #32CD32);
+      box-shadow: 0 4px 16px rgba(34, 139, 34, 0.4);
+    }
+
+    .btn-play:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(34, 139, 34, 0.5);
+    }
+
+    .btn-play:active {
+      transform: translateY(0);
+    }
+
+    /* Game over screen */
+    .game-over-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 14px 10px;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .stat-value.gold { color: #ffd700; }
+    .stat-value.green { color: #4ade80; }
+    .stat-value.red { color: #ef4444; }
+    .stat-value.blue { color: #60a5fa; }
+
+    .new-high-score {
+      background: linear-gradient(135deg, #ffd700, #ffaa00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-size: 1.1rem;
+      font-weight: 800;
+      margin: 8px 0;
+      animation: pulse 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { opacity: 0.7; }
+      to { opacity: 1; }
+    }
+
+    /* High score in HUD */
+    .high-score-badge {
+      font-size: 0.75rem;
+      color: rgba(255, 215, 0, 0.6);
+      margin-top: 2px;
+    }
+
+    /* Instructions */
+    .instructions {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin: 20px 0 24px;
+      flex-wrap: wrap;
+    }
+
+    .instruction-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .instruction-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+
+    .instruction-icon.brown { background: rgba(139, 94, 60, 0.3); }
+    .instruction-icon.gold { background: rgba(255, 215, 0, 0.2); }
+    .instruction-icon.dark { background: rgba(255, 68, 68, 0.2); }
+
+    .instruction-text {
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .instruction-points {
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .instruction-points.green { color: #4ade80; }
+    .instruction-points.gold { color: #ffd700; }
+    .instruction-points.red { color: #ef4444; }
+
+    /* Responsive */
+    @media (max-width: 400px) {
+      .game-board {
+        gap: 10px;
+        padding: 16px;
+      }
+
+      .title {
+        font-size: 1.6rem;
+      }
+
+      .hud-value {
+        font-size: 1.3rem;
+      }
+    }
+
+    @media (min-width: 500px) {
+      .container {
+        padding-top: 20px;
+      }
+    }
+
+    /* Shake animation for bomb hit */
+    .shake {
+      animation: shake 0.3s ease-in-out;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="../index.html" class="back-btn">
+      <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+      Back
+    </a>
+
+    <h1 class="title">Whack-a-Mole</h1>
+
+    <div class="hud">
+      <div class="hud-item">
+        <span class="hud-label">Score</span>
+        <span class="hud-value score-display" id="scoreDisplay">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Combo</span>
+        <span class="hud-value combo-display" id="comboDisplay">1x</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Time</span>
+        <span class="hud-value timer-display" id="timerDisplay">30</span>
+      </div>
+    </div>
+
+    <div class="timer-bar-container">
+      <div class="timer-bar" id="timerBar"></div>
+    </div>
+
+    <div class="game-board" id="gameBoard">
+      <!-- 9 holes generated by JS -->
+    </div>
+  </div>
+
+  <!-- Start Screen -->
+  <div class="screen-overlay" id="startScreen">
+    <div class="screen-content">
+      <div class="screen-emoji">🐹</div>
+      <div class="screen-title">Whack-a-Mole</div>
+      <div class="screen-subtitle">Whack moles before they hide! Watch out for bombs!</div>
+      <div class="instructions">
+        <div class="instruction-item">
+          <div class="instruction-icon brown">🐹</div>
+          <span class="instruction-points green">+10</span>
+          <span class="instruction-text">Mole</span>
+        </div>
+        <div class="instruction-item">
+          <div class="instruction-icon gold">✨</div>
+          <span class="instruction-points gold">+50</span>
+          <span class="instruction-text">Golden</span>
+        </div>
+        <div class="instruction-item">
+          <div class="instruction-icon dark">💣</div>
+          <span class="instruction-points red">-30</span>
+          <span class="instruction-text">Bomb</span>
+        </div>
+      </div>
+      <button class="btn btn-play" id="startBtn">Start Game</button>
+      <div class="high-score-badge" id="startHighScore" style="margin-top:14px;"></div>
+    </div>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div class="screen-overlay hidden" id="gameOverScreen">
+    <div class="screen-content">
+      <div class="screen-emoji">🏆</div>
+      <div class="screen-title">Game Over!</div>
+      <div id="newHighScoreText" class="new-high-score" style="display:none;">New High Score!</div>
+      <div class="game-over-stats">
+        <div class="stat-card">
+          <div class="stat-label">Score</div>
+          <div class="stat-value gold" id="finalScore">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Best</div>
+          <div class="stat-value gold" id="finalBest">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Hits</div>
+          <div class="stat-value green" id="finalHits">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Misses</div>
+          <div class="stat-value red" id="finalMisses">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Max Combo</div>
+          <div class="stat-value blue" id="finalCombo">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Accuracy</div>
+          <div class="stat-value green" id="finalAccuracy">0%</div>
+        </div>
+      </div>
+      <button class="btn btn-play" id="restartBtn">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      // --- Config ---
+      const GAME_DURATION = 30;
+      const BASE_MOLE_INTERVAL = 1200;
+      const MIN_MOLE_INTERVAL = 400;
+      const BASE_MOLE_STAY = 1400;
+      const MIN_MOLE_STAY = 500;
+      const GOLDEN_CHANCE = 0.05;
+      const BOMB_CHANCE = 0.10;
+      const COMBO_WINDOW = 1000;
+      const POINTS_MOLE = 10;
+      const POINTS_GOLDEN = 50;
+      const POINTS_BOMB = -30;
+
+      // --- State ---
+      let score = 0;
+      let highScore = parseInt(localStorage.getItem('whackamole_highscore') || '0', 10);
+      let timeLeft = GAME_DURATION;
+      let gameActive = false;
+      let combo = 0;
+      let maxCombo = 0;
+      let lastHitTime = 0;
+      let hits = 0;
+      let misses = 0;
+      let totalMoles = 0;
+      let gameTimer = null;
+      let moleTimer = null;
+      let timerInterval = null;
+      let activeMoles = new Set();
+
+      // --- DOM ---
+      const gameBoard = document.getElementById('gameBoard');
+      const scoreDisplay = document.getElementById('scoreDisplay');
+      const comboDisplay = document.getElementById('comboDisplay');
+      const timerDisplay = document.getElementById('timerDisplay');
+      const timerBar = document.getElementById('timerBar');
+      const startScreen = document.getElementById('startScreen');
+      const gameOverScreen = document.getElementById('gameOverScreen');
+      const startBtn = document.getElementById('startBtn');
+      const restartBtn = document.getElementById('restartBtn');
+      const startHighScore = document.getElementById('startHighScore');
+
+      // --- Build holes ---
+      function buildBoard() {
+        gameBoard.innerHTML = '';
+        for (let i = 0; i < 9; i++) {
+          const hole = document.createElement('div');
+          hole.className = 'hole';
+          hole.dataset.index = i;
+          hole.innerHTML = `
+            <div class="hole-shadow"></div>
+            <div class="mole-container">
+              <div class="mole" data-hole="${i}">
+                <div class="mole-body">
+                  <div class="mole-eye-shine left"></div>
+                  <div class="mole-eye-shine right"></div>
+                  <div class="mole-nose"></div>
+                  <div class="mole-cheek left"></div>
+                  <div class="mole-cheek right"></div>
+                  <div class="mole-mouth"></div>
+                  <div class="mole-whisker left-top"></div>
+                  <div class="mole-whisker left-bottom"></div>
+                  <div class="mole-whisker right-top"></div>
+                  <div class="mole-whisker right-bottom"></div>
+                  <div class="bomb-fuse"></div>
+                  <div class="bomb-eye left"></div>
+                  <div class="bomb-eye right"></div>
+                  <div class="bomb-skull">☠</div>
+                  <div class="sparkle"></div>
+                  <div class="sparkle"></div>
+                  <div class="sparkle"></div>
+                </div>
+              </div>
+            </div>
+            <div class="hole-dirt"></div>
+            <div class="hole-front"></div>
+          `;
+          gameBoard.appendChild(hole);
+        }
+
+        // Attach event listeners
+        gameBoard.querySelectorAll('.mole').forEach(mole => {
+          const handler = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            whackMole(mole);
+          };
+          mole.addEventListener('pointerdown', handler);
+        });
+      }
+
+      // --- Show/hide screens ---
+      function showStartScreen() {
+        startScreen.classList.remove('hidden');
+        gameOverScreen.classList.add('hidden');
+        if (highScore > 0) {
+          startHighScore.textContent = `Best: ${highScore}`;
+        } else {
+          startHighScore.textContent = '';
+        }
+      }
+
+      function showGameOverScreen() {
+        gameOverScreen.classList.remove('hidden');
+        const isNew = score > highScore;
+        if (isNew) {
+          highScore = score;
+          localStorage.setItem('whackamole_highscore', highScore.toString());
+        }
+        document.getElementById('finalScore').textContent = score;
+        document.getElementById('finalBest').textContent = highScore;
+        document.getElementById('finalHits').textContent = hits;
+        document.getElementById('finalMisses').textContent = misses;
+        document.getElementById('finalCombo').textContent = maxCombo + 'x';
+        const accuracy = totalMoles > 0 ? Math.round((hits / totalMoles) * 100) : 0;
+        document.getElementById('finalAccuracy').textContent = accuracy + '%';
+        const newHS = document.getElementById('newHighScoreText');
+        if (isNew) {
+          newHS.style.display = 'block';
+        } else {
+          newHS.style.display = 'none';
+        }
+      }
+
+      // --- Game logic ---
+      function startGame() {
+        score = 0;
+        timeLeft = GAME_DURATION;
+        combo = 0;
+        maxCombo = 0;
+        lastHitTime = 0;
+        hits = 0;
+        misses = 0;
+        totalMoles = 0;
+        gameActive = true;
+        activeMoles.clear();
+
+        updateHUD();
+        startScreen.classList.add('hidden');
+        gameOverScreen.classList.add('hidden');
+
+        // Reset all moles
+        gameBoard.querySelectorAll('.mole').forEach(m => {
+          m.className = 'mole';
+          m.style.transform = '';
+        });
+
+        // Start timer
+        timerInterval = setInterval(() => {
+          timeLeft -= 0.1;
+          if (timeLeft <= 0) {
+            timeLeft = 0;
+            endGame();
+          }
+          updateTimerDisplay();
+        }, 100);
+
+        // Start spawning moles
+        scheduleMole();
+      }
+
+      function endGame() {
+        gameActive = false;
+        clearInterval(timerInterval);
+        clearTimeout(moleTimer);
+
+        // Hide all active moles
+        activeMoles.forEach(idx => {
+          const mole = gameBoard.querySelector(`.mole[data-hole="${idx}"]`);
+          if (mole) {
+            mole.classList.remove('active', 'golden', 'bomb');
+            mole.classList.add('hiding');
+          }
+        });
+        activeMoles.clear();
+
+        setTimeout(() => {
+          showGameOverScreen();
+        }, 400);
+      }
+
+      function scheduleMole() {
+        if (!gameActive) return;
+
+        const elapsed = GAME_DURATION - timeLeft;
+        const progress = elapsed / GAME_DURATION;
+
+        // Difficulty ramp: interval decreases over time
+        const interval = Math.max(
+          MIN_MOLE_INTERVAL,
+          BASE_MOLE_INTERVAL - (BASE_MOLE_INTERVAL - MIN_MOLE_INTERVAL) * progress
+        );
+
+        // Add some randomness
+        const jitter = interval * 0.3;
+        const delay = interval + (Math.random() * jitter * 2 - jitter);
+
+        moleTimer = setTimeout(() => {
+          if (gameActive) {
+            spawnMole();
+            scheduleMole();
+          }
+        }, Math.max(200, delay));
+      }
+
+      function spawnMole() {
+        if (!gameActive) return;
+
+        // Pick a random unoccupied hole
+        const available = [];
+        for (let i = 0; i < 9; i++) {
+          if (!activeMoles.has(i)) available.push(i);
+        }
+        if (available.length === 0) return;
+
+        const idx = available[Math.floor(Math.random() * available.length)];
+        const mole = gameBoard.querySelector(`.mole[data-hole="${idx}"]`);
+        if (!mole) return;
+
+        activeMoles.add(idx);
+        totalMoles++;
+
+        // Determine type
+        const roll = Math.random();
+        let type = 'normal';
+        if (roll < GOLDEN_CHANCE) {
+          type = 'golden';
+        } else if (roll < GOLDEN_CHANCE + BOMB_CHANCE) {
+          type = 'bomb';
+        }
+
+        // Set class
+        mole.className = 'mole active';
+        if (type === 'golden') mole.classList.add('golden');
+        if (type === 'bomb') mole.classList.add('bomb');
+        mole.dataset.type = type;
+        mole.dataset.whacked = 'false';
+
+        // Calculate stay duration (decreases with difficulty)
+        const elapsed = GAME_DURATION - timeLeft;
+        const progress = elapsed / GAME_DURATION;
+        const stayDuration = Math.max(
+          MIN_MOLE_STAY,
+          BASE_MOLE_STAY - (BASE_MOLE_STAY - MIN_MOLE_STAY) * progress
+        );
+
+        // Auto-hide after stay duration
+        const hideTimeout = setTimeout(() => {
+          if (mole.dataset.whacked !== 'true' && gameActive) {
+            misses++;
+            hideMole(mole, idx);
+          }
+        }, stayDuration);
+
+        mole.dataset.hideTimeout = hideTimeout;
+      }
+
+      function hideMole(mole, idx) {
+        mole.classList.remove('active');
+        mole.classList.add('hiding');
+        activeMoles.delete(idx);
+
+        setTimeout(() => {
+          if (!mole.classList.contains('active')) {
+            mole.className = 'mole';
+          }
+        }, 250);
+      }
+
+      function whackMole(mole) {
+        if (!gameActive) return;
+        if (!mole.classList.contains('active')) return;
+        if (mole.dataset.whacked === 'true') return;
+
+        mole.dataset.whacked = 'true';
+        const idx = parseInt(mole.dataset.hole);
+        const type = mole.dataset.type || 'normal';
+
+        // Clear auto-hide
+        clearTimeout(parseInt(mole.dataset.hideTimeout));
+
+        // Combo logic
+        const now = Date.now();
+        if (type !== 'bomb') {
+          if (now - lastHitTime < COMBO_WINDOW) {
+            combo++;
+          } else {
+            combo = 1;
+          }
+          lastHitTime = now;
+          if (combo > maxCombo) maxCombo = combo;
+        }
+
+        // Score calculation
+        let points = 0;
+        let popupClass = '';
+        if (type === 'golden') {
+          points = POINTS_GOLDEN;
+          popupClass = 'golden-score';
+          hits++;
+        } else if (type === 'bomb') {
+          points = POINTS_BOMB;
+          popupClass = 'negative';
+          combo = 0;
+          // Bomb effects
+          showBombFlash();
+          gameBoard.classList.add('shake');
+          setTimeout(() => gameBoard.classList.remove('shake'), 300);
+        } else {
+          points = POINTS_MOLE;
+          popupClass = 'positive';
+          hits++;
+        }
+
+        // Apply combo multiplier (only for positive hits)
+        let comboMultiplier = 1;
+        if (type !== 'bomb' && combo >= 2) {
+          comboMultiplier = Math.min(combo, 5);
+          points *= comboMultiplier;
+        }
+
+        score = Math.max(0, score + points);
+
+        // Visual feedback
+        createWhackEffect(mole);
+        createScorePopup(mole, points, popupClass);
+
+        if (type !== 'bomb' && combo >= 2) {
+          showComboPopup(combo);
+        }
+
+        // Whack animation
+        mole.classList.remove('active');
+        mole.classList.add('whacked');
+        activeMoles.delete(idx);
+
+        setTimeout(() => {
+          mole.className = 'mole';
+        }, 300);
+
+        updateHUD();
+      }
+
+      // --- Effects ---
+      function createWhackEffect(mole) {
+        const hole = mole.closest('.hole');
+        const rect = hole.getBoundingClientRect();
+        const boardRect = gameBoard.getBoundingClientRect();
+
+        const cx = rect.left - boardRect.left + rect.width / 2;
+        const cy = rect.top - boardRect.top + rect.height * 0.3;
+
+        const type = mole.dataset.type;
+        const starCount = type === 'golden' ? 12 : 8;
+        const colors = type === 'bomb'
+          ? ['#ff4444', '#ff6b35', '#ffaa00']
+          : type === 'golden'
+            ? ['#ffd700', '#ffaa00', '#fff']
+            : ['#ffd700', '#ff6b35', '#4ade80', '#fff'];
+
+        for (let i = 0; i < starCount; i++) {
+          const star = document.createElement('div');
+          star.className = 'whack-star';
+          star.style.position = 'absolute';
+          star.style.left = cx + 'px';
+          star.style.top = cy + 'px';
+          star.style.zIndex = '10';
+          star.style.pointerEvents = 'none';
+
+          const angle = (360 / starCount) * i + Math.random() * 20;
+          const dist = 20 + Math.random() * 30;
+          const tx = Math.cos(angle * Math.PI / 180) * dist;
+          const ty = Math.sin(angle * Math.PI / 180) * dist;
+          const rot = Math.random() * 360;
+          star.style.background = colors[Math.floor(Math.random() * colors.length)];
+          star.style.animation = 'none';
+          star.style.width = (5 + Math.random() * 6) + 'px';
+          star.style.height = star.style.width;
+
+          gameBoard.appendChild(star);
+
+          requestAnimationFrame(() => {
+            star.style.transition = 'all 0.4s ease-out';
+            star.style.transform = `translate(${tx}px, ${ty}px) scale(0.3) rotate(${rot}deg)`;
+            star.style.opacity = '0';
+          });
+
+          setTimeout(() => star.remove(), 500);
+        }
+      }
+
+      function createScorePopup(mole, points, cssClass) {
+        const hole = mole.closest('.hole');
+        const rect = hole.getBoundingClientRect();
+        const boardRect = gameBoard.getBoundingClientRect();
+
+        const popup = document.createElement('div');
+        popup.className = `score-popup ${cssClass}`;
+        const sign = points >= 0 ? '+' : '';
+        popup.textContent = sign + points;
+        popup.style.left = (rect.left - boardRect.left + rect.width / 2 - 20) + 'px';
+        popup.style.top = (rect.top - boardRect.top + rect.height * 0.15) + 'px';
+
+        gameBoard.appendChild(popup);
+        setTimeout(() => popup.remove(), 900);
+      }
+
+      function showComboPopup(comboCount) {
+        // Remove existing
+        document.querySelectorAll('.combo-popup').forEach(el => el.remove());
+
+        const popup = document.createElement('div');
+        popup.className = 'combo-popup';
+        popup.textContent = `${comboCount}x COMBO!`;
+        document.body.appendChild(popup);
+        setTimeout(() => popup.remove(), 700);
+      }
+
+      function showBombFlash() {
+        const flash = document.createElement('div');
+        flash.className = 'bomb-flash';
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 350);
+      }
+
+      // --- HUD ---
+      function updateHUD() {
+        scoreDisplay.textContent = score;
+        comboDisplay.textContent = combo >= 2 ? combo + 'x' : '1x';
+        if (combo >= 2) {
+          comboDisplay.style.color = '#ff6b6b';
+          comboDisplay.style.transform = 'scale(1.15)';
+          setTimeout(() => { comboDisplay.style.transform = 'scale(1)'; }, 150);
+        } else {
+          comboDisplay.style.color = 'rgba(255,107,107,0.5)';
+        }
+      }
+
+      function updateTimerDisplay() {
+        const t = Math.max(0, timeLeft);
+        timerDisplay.textContent = Math.ceil(t);
+        const pct = (t / GAME_DURATION) * 100;
+        timerBar.style.width = pct + '%';
+
+        // Color thresholds
+        timerBar.classList.remove('warning', 'danger');
+        if (pct <= 20) {
+          timerBar.classList.add('danger');
+          timerDisplay.style.color = '#ef4444';
+        } else if (pct <= 50) {
+          timerBar.classList.add('warning');
+          timerDisplay.style.color = '#fbbf24';
+        } else {
+          timerDisplay.style.color = '#4ade80';
+        }
+      }
+
+      // --- Init ---
+      buildBoard();
+      showStartScreen();
+      updateTimerDisplay();
+
+      startBtn.addEventListener('click', startGame);
+      restartBtn.addEventListener('click', () => {
+        gameOverScreen.classList.add('hidden');
+        startGame();
+      });
+
+      // Prevent context menu on mobile long-press
+      document.addEventListener('contextmenu', e => e.preventDefault());
+
+      // Prevent double-tap zoom
+      let lastTouchEnd = 0;
+      document.addEventListener('touchend', (e) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) {
+          e.preventDefault();
+        }
+        lastTouchEnd = now;
+      }, { passive: false });
+    })();
+  </script>
+</body>
+</html>

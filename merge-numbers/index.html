@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Merge Numbers</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{
+  width:100%;height:100%;
+  background:#0a0a1a;
+  color:#fff;
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  overflow:hidden;
+  user-select:none;
+  -webkit-user-select:none;
+}
+body{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  padding:10px;
+}
+
+/* Header */
+.header{
+  width:100%;max-width:420px;
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:6px;
+}
+.back-btn{
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.12);
+  color:#fff;
+  border-radius:10px;
+  padding:8px 14px;
+  font-size:15px;
+  cursor:pointer;
+  text-decoration:none;
+  transition:background 0.2s;
+  display:flex;align-items:center;gap:6px;
+}
+.back-btn:hover{background:rgba(255,255,255,0.15);}
+.game-title{
+  font-size:clamp(24px,6vw,36px);
+  font-weight:900;
+  background:linear-gradient(135deg,#4a9eff,#44d7b6,#f7c948,#ff6b6b,#a855f7);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  letter-spacing:-1px;
+}
+
+/* Score bar */
+.score-bar{
+  width:100%;max-width:420px;
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:8px;
+  gap:8px;
+}
+.score-box{
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:12px;
+  padding:8px 16px;
+  text-align:center;
+  flex:1;
+}
+.score-box .label{
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:1px;
+  color:rgba(255,255,255,0.45);
+  margin-bottom:2px;
+}
+.score-box .value{
+  font-size:22px;
+  font-weight:800;
+  color:#fff;
+}
+.next-preview-box{
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:12px;
+  padding:8px 16px;
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.next-preview-box .label{
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:1px;
+  color:rgba(255,255,255,0.45);
+  margin-bottom:4px;
+}
+.next-tile-preview{
+  width:36px;height:36px;
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:800;
+  box-shadow:0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Grid container */
+.grid-container{
+  position:relative;
+  width:100%;max-width:420px;
+}
+.grid-wrapper{
+  position:relative;
+  background:rgba(255,255,255,0.04);
+  border:2px solid rgba(255,255,255,0.08);
+  border-radius:16px;
+  padding:8px;
+  overflow:hidden;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  grid-template-rows:repeat(5,1fr);
+  gap:6px;
+  aspect-ratio:1/1;
+}
+.cell{
+  background:rgba(255,255,255,0.04);
+  border-radius:10px;
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* Column highlight zones */
+.col-zones{
+  position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  pointer-events:none;
+  padding:8px;
+  gap:6px;
+  border-radius:16px;
+}
+.col-zone{
+  pointer-events:auto;
+  cursor:pointer;
+  border-radius:10px;
+  transition:background 0.15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.col-zone:hover,.col-zone.active{
+  background:rgba(255,255,255,0.06);
+}
+
+/* Tiles */
+.tile{
+  position:absolute;
+  width:100%;height:100%;
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:clamp(18px,4.5vw,28px);
+  font-weight:900;
+  box-shadow:0 3px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+  transition:transform 0.08s ease-out;
+  z-index:2;
+}
+
+/* Tile colors */
+.tile-1{background:linear-gradient(145deg,#4a9eff,#2d7bd4);color:#fff;}
+.tile-2{background:linear-gradient(145deg,#44d7b6,#2ab89a);color:#fff;}
+.tile-3{background:linear-gradient(145deg,#f7c948,#d4a832);color:#1a1a2e;}
+.tile-4{background:linear-gradient(145deg,#ff9f43,#e07b28);color:#fff;}
+.tile-5{background:linear-gradient(145deg,#ff6b6b,#d44545);color:#fff;}
+.tile-6{background:linear-gradient(145deg,#a855f7,#8b3fd4);color:#fff;}
+.tile-7{background:linear-gradient(145deg,#f472b6,#d44f94);color:#fff;}
+.tile-8{background:linear-gradient(145deg,#22d3ee,#0ea5c9);color:#1a1a2e;}
+.tile-9{background:linear-gradient(145deg,#fbbf24,#d4990a);color:#1a1a2e;text-shadow:0 0 10px rgba(251,191,36,0.5);}
+.tile-10{
+  background:linear-gradient(145deg,#ff3864,#a855f7,#4a9eff);
+  background-size:200% 200%;
+  animation:rainbow 2s ease infinite;
+  color:#fff;
+  text-shadow:0 0 12px rgba(255,255,255,0.5);
+}
+@keyframes rainbow{
+  0%,100%{background-position:0% 50%;}
+  50%{background-position:100% 50%;}
+}
+
+/* Animations */
+@keyframes dropIn{
+  0%{transform:translateY(-400%);opacity:0.8;}
+  60%{transform:translateY(8%);opacity:1;}
+  80%{transform:translateY(-4%);}
+  100%{transform:translateY(0);}
+}
+@keyframes dropTo{
+  0%{opacity:1;}
+  100%{opacity:1;}
+}
+@keyframes mergeGrow{
+  0%{transform:scale(0.3);opacity:0;}
+  50%{transform:scale(1.25);}
+  100%{transform:scale(1);opacity:1;}
+}
+@keyframes mergeShrink{
+  0%{transform:scale(1);opacity:1;}
+  100%{transform:scale(0);opacity:0;}
+}
+@keyframes popIn{
+  0%{transform:scale(0);opacity:0;}
+  60%{transform:scale(1.3);}
+  100%{transform:scale(1);opacity:1;}
+}
+.tile.dropping{
+  animation:dropIn 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+.tile.merging-out{
+  animation:mergeShrink 0.2s ease-in forwards;
+  z-index:1;
+}
+.tile.merging-in{
+  animation:mergeGrow 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  z-index:3;
+}
+.tile.settling{
+  transition:top 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+/* Combo text */
+.combo-popup{
+  position:absolute;
+  font-size:clamp(20px,5vw,32px);
+  font-weight:900;
+  color:#f7c948;
+  text-shadow:0 0 20px rgba(247,201,72,0.6),0 2px 4px rgba(0,0,0,0.5);
+  pointer-events:none;
+  z-index:100;
+  animation:comboFloat 1s ease-out forwards;
+  white-space:nowrap;
+}
+@keyframes comboFloat{
+  0%{transform:translateY(0) scale(0.5);opacity:0;}
+  20%{transform:translateY(-10px) scale(1.2);opacity:1;}
+  100%{transform:translateY(-60px) scale(0.8);opacity:0;}
+}
+
+/* Screens */
+.screen-overlay{
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  background:rgba(10,10,26,0.92);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;
+  z-index:1000;
+  opacity:0;
+  transition:opacity 0.3s;
+  pointer-events:none;
+}
+.screen-overlay.visible{
+  opacity:1;
+  pointer-events:auto;
+}
+.screen-card{
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:24px;
+  padding:40px 32px;
+  text-align:center;
+  max-width:360px;
+  width:90%;
+  transform:scale(0.9);
+  transition:transform 0.3s;
+}
+.screen-overlay.visible .screen-card{
+  transform:scale(1);
+}
+.screen-card h2{
+  font-size:32px;
+  font-weight:900;
+  margin-bottom:8px;
+  background:linear-gradient(135deg,#4a9eff,#44d7b6,#f7c948);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.screen-card .subtitle{
+  color:rgba(255,255,255,0.5);
+  font-size:14px;
+  margin-bottom:24px;
+  line-height:1.5;
+}
+.screen-card .stats{
+  display:flex;
+  gap:12px;
+  justify-content:center;
+  margin-bottom:28px;
+  flex-wrap:wrap;
+}
+.screen-card .stat{
+  background:rgba(255,255,255,0.06);
+  border-radius:12px;
+  padding:12px 16px;
+  min-width:80px;
+}
+.screen-card .stat .stat-value{
+  font-size:24px;
+  font-weight:800;
+  color:#f7c948;
+}
+.screen-card .stat .stat-label{
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:1px;
+  color:rgba(255,255,255,0.4);
+  margin-top:2px;
+}
+.btn{
+  background:linear-gradient(135deg,#4a9eff,#6c5ce7);
+  border:none;
+  color:#fff;
+  font-size:18px;
+  font-weight:700;
+  padding:14px 40px;
+  border-radius:14px;
+  cursor:pointer;
+  transition:transform 0.15s,box-shadow 0.15s;
+  box-shadow:0 4px 15px rgba(74,158,255,0.3);
+  -webkit-tap-highlight-color:transparent;
+}
+.btn:hover{transform:scale(1.05);box-shadow:0 6px 20px rgba(74,158,255,0.4);}
+.btn:active{transform:scale(0.97);}
+
+.new-high{
+  color:#f7c948;
+  font-weight:700;
+  font-size:14px;
+  margin-bottom:12px;
+  text-shadow:0 0 12px rgba(247,201,72,0.4);
+}
+
+/* How to play */
+.how-to{
+  margin-top:16px;
+  text-align:left;
+  background:rgba(255,255,255,0.04);
+  border-radius:12px;
+  padding:14px 16px;
+}
+.how-to h3{
+  font-size:13px;
+  text-transform:uppercase;
+  letter-spacing:1px;
+  color:rgba(255,255,255,0.5);
+  margin-bottom:8px;
+}
+.how-to ul{
+  list-style:none;
+  font-size:13px;
+  color:rgba(255,255,255,0.65);
+  line-height:1.8;
+}
+.how-to ul li::before{
+  content:'>';
+  color:#4a9eff;
+  font-weight:700;
+  margin-right:8px;
+}
+
+/* Game over specific */
+.game-over-title{
+  background:linear-gradient(135deg,#ff6b6b,#ff3864) !important;
+  -webkit-background-clip:text !important;
+  -webkit-text-fill-color:transparent !important;
+  background-clip:text !important;
+}
+
+/* Responsive */
+@media(max-height:700px){
+  body{padding:4px;}
+  .header{margin-bottom:4px;}
+  .score-bar{margin-bottom:4px;}
+  .score-box{padding:4px 10px;}
+  .score-box .value{font-size:18px;}
+  .grid-wrapper{padding:5px;}
+  .grid{gap:4px;}
+}
+@media(max-height:600px){
+  .header{margin-bottom:2px;}
+  .back-btn{padding:6px 10px;font-size:13px;}
+  .game-title{font-size:22px;}
+  .score-bar{margin-bottom:2px;}
+}
+@media(min-width:500px){
+  .grid-wrapper{max-width:420px;}
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <a href="../index.html" class="back-btn">← Back</a>
+  <div class="game-title">Merge Numbers</div>
+</div>
+
+<!-- Score bar -->
+<div class="score-bar">
+  <div class="score-box">
+    <div class="label">Score</div>
+    <div class="value" id="scoreDisplay">0</div>
+  </div>
+  <div class="next-preview-box">
+    <div class="label">Next</div>
+    <div class="next-tile-preview" id="nextPreview">1</div>
+  </div>
+  <div class="score-box">
+    <div class="label">Best</div>
+    <div class="value" id="bestDisplay">0</div>
+  </div>
+</div>
+
+<!-- Grid -->
+<div class="grid-container">
+  <div class="grid-wrapper" id="gridWrapper">
+    <div class="grid" id="grid"></div>
+    <div class="col-zones" id="colZones"></div>
+  </div>
+</div>
+
+<!-- Start Screen -->
+<div class="screen-overlay visible" id="startScreen">
+  <div class="screen-card">
+    <h2>Merge Numbers</h2>
+    <div class="subtitle">Drop numbers into columns. Match 3 or more to merge them into bigger numbers!</div>
+    <button class="btn" id="startBtn">Play</button>
+    <div class="how-to">
+      <h3>How to Play</h3>
+      <ul>
+        <li>Tap a column to drop a number</li>
+        <li>3+ adjacent same numbers merge</li>
+        <li>Merged tiles become the next number</li>
+        <li>Chain reactions score bonus points</li>
+        <li>Don't let columns fill up!</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Game Over Screen -->
+<div class="screen-overlay" id="gameOverScreen">
+  <div class="screen-card">
+    <h2 class="game-over-title">Game Over</h2>
+    <div id="newHighLabel" class="new-high" style="display:none;">New High Score!</div>
+    <div class="stats" id="gameOverStats"></div>
+    <button class="btn" id="restartBtn">Play Again</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  // === Constants ===
+  const COLS = 5;
+  const ROWS = 5;
+  const LS_KEY = 'mergeNumbers_highScore';
+  const LS_SCORE_KEY = 'mergeNumbers_lastScore';
+
+  // Tile colors for getComputedStyle backup
+  const TILE_COLORS = {
+    1:'#4a9eff', 2:'#44d7b6', 3:'#f7c948', 4:'#ff9f43', 5:'#ff6b6b',
+    6:'#a855f7', 7:'#f472b6', 8:'#22d3ee', 9:'#fbbf24', 10:'#ff3864'
+  };
+
+  // === State ===
+  let grid = [];       // grid[row][col] = number or 0
+  let score = 0;
+  let highScore = parseInt(localStorage.getItem(LS_KEY)) || 0;
+  let nextNumber = 0;
+  let gameActive = false;
+  let dropping = false; // lock input during animations
+  let highestNumber = 0;
+  let totalMerges = 0;
+  let maxChain = 0;
+
+  // === DOM refs ===
+  const gridEl = document.getElementById('grid');
+  const colZonesEl = document.getElementById('colZones');
+  const scoreDisplay = document.getElementById('scoreDisplay');
+  const bestDisplay = document.getElementById('bestDisplay');
+  const nextPreview = document.getElementById('nextPreview');
+  const startScreen = document.getElementById('startScreen');
+  const gameOverScreen = document.getElementById('gameOverScreen');
+  const gridWrapper = document.getElementById('gridWrapper');
+
+  // === Init grid DOM ===
+  function buildGridDOM(){
+    gridEl.innerHTML = '';
+    colZonesEl.innerHTML = '';
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.id = `cell-${r}-${c}`;
+        gridEl.appendChild(cell);
+      }
+    }
+    for(let c=0;c<COLS;c++){
+      const zone = document.createElement('div');
+      zone.className = 'col-zone';
+      zone.dataset.col = c;
+      zone.addEventListener('click', ()=> onColumnClick(c));
+      zone.addEventListener('touchstart', (e)=>{
+        e.preventDefault();
+        zone.classList.add('active');
+      }, {passive:false});
+      zone.addEventListener('touchend', (e)=>{
+        e.preventDefault();
+        zone.classList.remove('active');
+        onColumnClick(c);
+      }, {passive:false});
+      colZonesEl.appendChild(zone);
+    }
+  }
+
+  // === Utility ===
+  function randomNumber(){
+    return Math.floor(Math.random()*5)+1;
+  }
+
+  function getTileClass(n){
+    if(n>=10) return 'tile-10';
+    return `tile-${n}`;
+  }
+
+  function updatePreview(){
+    nextPreview.textContent = nextNumber;
+    nextPreview.className = 'next-tile-preview ' + getTileClass(nextNumber);
+  }
+
+  function updateScore(){
+    scoreDisplay.textContent = score.toLocaleString();
+    if(score > highScore){
+      highScore = score;
+      localStorage.setItem(LS_KEY, highScore);
+    }
+    bestDisplay.textContent = highScore.toLocaleString();
+  }
+
+  // === Render grid tiles ===
+  function renderGrid(){
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const cell = document.getElementById(`cell-${r}-${c}`);
+        // Remove old tile if any
+        const old = cell.querySelector('.tile');
+        if(old && !old.classList.contains('merging-out')) old.remove();
+        if(grid[r][c] > 0){
+          // Don't duplicate
+          if(cell.querySelector('.tile:not(.merging-out)')) continue;
+          const tile = createTileEl(grid[r][c]);
+          cell.appendChild(tile);
+        }
+      }
+    }
+  }
+
+  function clearAllTiles(){
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const cell = document.getElementById(`cell-${r}-${c}`);
+        cell.innerHTML = '';
+      }
+    }
+  }
+
+  function createTileEl(n){
+    const tile = document.createElement('div');
+    tile.className = 'tile ' + getTileClass(n);
+    tile.textContent = n;
+    return tile;
+  }
+
+  // === Find landing row ===
+  function landingRow(col){
+    for(let r=ROWS-1;r>=0;r--){
+      if(grid[r][col]===0) return r;
+    }
+    return -1; // column full
+  }
+
+  // === Drop a tile into column ===
+  function onColumnClick(col){
+    if(!gameActive || dropping) return;
+    const row = landingRow(col);
+    if(row < 0) return; // column full, ignore
+
+    dropping = true;
+    const num = nextNumber;
+    nextNumber = randomNumber();
+    updatePreview();
+
+    grid[row][col] = num;
+
+    // Animate drop
+    const cell = document.getElementById(`cell-${row}-${col}`);
+    const tile = createTileEl(num);
+    tile.classList.add('dropping');
+    cell.appendChild(tile);
+
+    // After drop animation, check merges
+    setTimeout(()=>{
+      tile.classList.remove('dropping');
+      processMerges(0);
+    }, 400);
+  }
+
+  // === BFS to find connected groups ===
+  function findGroups(){
+    const visited = Array.from({length:ROWS},()=>Array(COLS).fill(false));
+    const groups = [];
+    const dirs = [[0,1],[0,-1],[1,0],[-1,0]];
+
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        if(grid[r][c]===0 || visited[r][c]) continue;
+        const val = grid[r][c];
+        const group = [];
+        const queue = [[r,c]];
+        visited[r][c] = true;
+        while(queue.length){
+          const [cr,cc] = queue.shift();
+          group.push([cr,cc]);
+          for(const [dr,dc] of dirs){
+            const nr = cr+dr, nc = cc+dc;
+            if(nr>=0 && nr<ROWS && nc>=0 && nc<COLS && !visited[nr][nc] && grid[nr][nc]===val){
+              visited[nr][nc] = true;
+              queue.push([nr,nc]);
+            }
+          }
+        }
+        if(group.length >= 3){
+          groups.push({val, cells:group});
+        }
+      }
+    }
+    return groups;
+  }
+
+  // === Process merges with chain support ===
+  function processMerges(chainLevel){
+    const groups = findGroups();
+    if(groups.length === 0){
+      // Apply gravity then check game over
+      applyGravity(()=>{
+        // After gravity, check for new merges
+        const newGroups = findGroups();
+        if(newGroups.length > 0){
+          processMerges(chainLevel);
+        } else {
+          dropping = false;
+          checkGameOver();
+        }
+      });
+      return;
+    }
+
+    const chain = chainLevel + 1;
+    if(chain > maxChain) maxChain = chain;
+
+    // Animate merge-out for all group cells
+    let mergePromises = [];
+    let mergeTargets = []; // {row, col, newVal} for each group
+
+    for(const group of groups){
+      totalMerges++;
+      const newVal = group.val + 1;
+      if(newVal > highestNumber) highestNumber = newVal;
+
+      // Score: merged_number * 10 * chain_multiplier
+      const points = newVal * 10 * chain;
+      score += points;
+      updateScore();
+
+      // Find target cell: lowest row (most towards bottom), leftmost
+      let target = group.cells[0];
+      for(const [r,c] of group.cells){
+        if(r > target[0] || (r === target[0] && c < target[1])){
+          target = [r,c];
+        }
+      }
+      mergeTargets.push({row:target[0], col:target[1], newVal, groupCells:group.cells});
+
+      // Animate merge-out
+      for(const [r,c] of group.cells){
+        const cell = document.getElementById(`cell-${r}-${c}`);
+        const tile = cell.querySelector('.tile');
+        if(tile){
+          tile.classList.add('merging-out');
+        }
+        grid[r][c] = 0;
+      }
+    }
+
+    // Show combo popup if chain > 1
+    if(chain > 1){
+      showComboPopup(chain);
+    }
+
+    // After merge-out animation, place new tiles and apply gravity
+    setTimeout(()=>{
+      // Clear all merging-out tiles
+      document.querySelectorAll('.merging-out').forEach(el=>el.remove());
+
+      // Place merged tiles
+      for(const mt of mergeTargets){
+        grid[mt.row][mt.col] = mt.newVal;
+        const cell = document.getElementById(`cell-${mt.row}-${mt.col}`);
+        const newTile = createTileEl(mt.newVal);
+        newTile.classList.add('merging-in');
+        cell.appendChild(newTile);
+        setTimeout(()=> newTile.classList.remove('merging-in'), 350);
+      }
+
+      // Apply gravity then check for chain merges
+      setTimeout(()=>{
+        applyGravity(()=>{
+          processMerges(chain);
+        });
+      }, 100);
+    }, 220);
+  }
+
+  // === Gravity: tiles fall to fill gaps ===
+  function applyGravity(callback){
+    let moved = false;
+
+    for(let c=0;c<COLS;c++){
+      // Collect non-zero values from bottom
+      let vals = [];
+      for(let r=ROWS-1;r>=0;r--){
+        if(grid[r][c] !== 0) vals.push(grid[r][c]);
+      }
+      // Fill column from bottom
+      for(let r=ROWS-1;r>=0;r--){
+        const idx = ROWS-1-r;
+        const newVal = idx < vals.length ? vals[idx] : 0;
+        if(grid[r][c] !== newVal) moved = true;
+        grid[r][c] = newVal;
+      }
+    }
+
+    // Re-render
+    clearAllTiles();
+    renderGrid();
+
+    if(moved){
+      // Small delay for visual gravity effect
+      setTimeout(callback, 150);
+    } else {
+      setTimeout(callback, 50);
+    }
+  }
+
+  // === Combo popup ===
+  function showComboPopup(chain){
+    const popup = document.createElement('div');
+    popup.className = 'combo-popup';
+    const labels = ['','','Chain x2!','Chain x3!','Chain x4!','MEGA x5!','ULTRA x6!'];
+    popup.textContent = chain < labels.length ? labels[chain] : `INSANE x${chain}!`;
+
+    const rect = gridWrapper.getBoundingClientRect();
+    popup.style.left = (rect.width/2) + 'px';
+    popup.style.top = (rect.height/2) + 'px';
+    popup.style.transform = 'translate(-50%,-50%)';
+    gridWrapper.style.position = 'relative';
+    gridWrapper.appendChild(popup);
+
+    setTimeout(()=> popup.remove(), 1000);
+  }
+
+  // === Check game over ===
+  function checkGameOver(){
+    // Game over if ALL columns are full (top row all filled)
+    let full = true;
+    for(let c=0;c<COLS;c++){
+      if(grid[0][c] === 0){full=false;break;}
+    }
+    if(full){
+      gameActive = false;
+      // Save score for leaderboard
+      localStorage.setItem(LS_SCORE_KEY, score);
+      setTimeout(showGameOver, 300);
+    }
+  }
+
+  // === Show game over ===
+  function showGameOver(){
+    const isNewHigh = score >= highScore && score > 0;
+    document.getElementById('newHighLabel').style.display = isNewHigh ? 'block' : 'none';
+
+    const statsEl = document.getElementById('gameOverStats');
+    statsEl.innerHTML = `
+      <div class="stat">
+        <div class="stat-value">${score.toLocaleString()}</div>
+        <div class="stat-label">Score</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">${highestNumber}</div>
+        <div class="stat-label">Highest</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">${totalMerges}</div>
+        <div class="stat-label">Merges</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">${maxChain > 1 ? maxChain : 0}</div>
+        <div class="stat-label">Best Chain</div>
+      </div>
+    `;
+    gameOverScreen.classList.add('visible');
+  }
+
+  // === Start / Restart ===
+  function startGame(){
+    grid = Array.from({length:ROWS},()=>Array(COLS).fill(0));
+    score = 0;
+    highestNumber = 0;
+    totalMerges = 0;
+    maxChain = 0;
+    nextNumber = randomNumber();
+    gameActive = true;
+    dropping = false;
+
+    updateScore();
+    updatePreview();
+    clearAllTiles();
+
+    startScreen.classList.remove('visible');
+    gameOverScreen.classList.remove('visible');
+  }
+
+  // === Event listeners ===
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('restartBtn').addEventListener('click', startGame);
+
+  // === Init ===
+  buildGridDOM();
+  bestDisplay.textContent = highScore.toLocaleString();
+  nextNumber = randomNumber();
+  updatePreview();
+
+})();
+</script>
+</body>
+</html>
