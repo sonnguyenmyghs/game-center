@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Daily Check-in Bonus — Game Center</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a1a;
+      color: #fff;
+      min-height: 100vh;
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background:
+        radial-gradient(ellipse at 20% 30%, rgba(108, 92, 231, 0.18) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 15%, rgba(255, 215, 0, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 85%, rgba(108, 92, 231, 0.12) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 16px 16px 60px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Back button */
+    .back-btn {
+      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      font-size: 0.9rem;
+      padding: 8px 12px;
+      border-radius: 10px;
+      transition: all 0.2s;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 16px;
+    }
+
+    .back-btn:hover {
+      color: #fff;
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 8px;
+      width: 100%;
+    }
+
+    .header-icon {
+      font-size: 3rem;
+      line-height: 1;
+      margin-bottom: 8px;
+      display: block;
+      filter: drop-shadow(0 0 16px rgba(255, 215, 0, 0.5));
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .title {
+      font-size: 1.7rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffd700, #ffec6e, #ffd700);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 3s linear infinite;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 0% center; }
+      100% { background-position: 200% center; }
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 0;
+    }
+
+    /* Streak Banner */
+    .streak-banner {
+      width: 100%;
+      background: linear-gradient(135deg, rgba(108,92,231,0.25) 0%, rgba(108,92,231,0.1) 100%);
+      border: 1px solid rgba(108,92,231,0.4);
+      border-radius: 16px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .streak-banner::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at center, rgba(255,215,0,0.04) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .streak-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .streak-fire {
+      font-size: 1.8rem;
+      line-height: 1;
+    }
+
+    .streak-label {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .streak-count {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #ffd700;
+      line-height: 1;
+    }
+
+    .streak-status {
+      text-align: right;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .status-badge.ready {
+      background: rgba(0, 210, 100, 0.2);
+      border: 1px solid rgba(0, 210, 100, 0.4);
+      color: #00d264;
+    }
+
+    .status-badge.claimed {
+      background: rgba(255, 215, 0, 0.15);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      color: #ffd700;
+    }
+
+    /* Days grid */
+    .days-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    /* Day 7 spans 2 columns and is centered */
+    .day-card:last-child {
+      grid-column: 2 / 4;
+    }
+
+    .day-card {
+      border-radius: 14px;
+      padding: 12px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: default;
+      min-height: 110px;
+      justify-content: center;
+    }
+
+    /* Locked state */
+    .day-card.locked {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    /* Claimed state */
+    .day-card.claimed {
+      background: linear-gradient(135deg, rgba(255,215,0,0.12) 0%, rgba(255,215,0,0.05) 100%);
+      border: 1px solid rgba(255,215,0,0.3);
+    }
+
+    /* Today/active state */
+    .day-card.today {
+      background: linear-gradient(135deg, rgba(108,92,231,0.3) 0%, rgba(108,92,231,0.15) 100%);
+      border: 1.5px solid rgba(108,92,231,0.7);
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(108,92,231,0.25);
+    }
+
+    .day-card.today:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 24px rgba(108,92,231,0.4);
+    }
+
+    /* Today already claimed */
+    .day-card.today.done {
+      background: linear-gradient(135deg, rgba(255,215,0,0.18) 0%, rgba(255,215,0,0.08) 100%);
+      border: 1.5px solid rgba(255,215,0,0.5);
+      cursor: default;
+      box-shadow: 0 0 20px rgba(255,215,0,0.2);
+    }
+
+    .day-card.today.done:hover {
+      transform: none;
+    }
+
+    /* Day 7 grand prize glow */
+    .day-card.grand {
+      background: linear-gradient(135deg, rgba(255,100,0,0.2) 0%, rgba(255,215,0,0.15) 100%);
+      border: 1.5px solid rgba(255,165,0,0.5);
+    }
+
+    .day-card.grand.today {
+      background: linear-gradient(135deg, rgba(255,100,0,0.3) 0%, rgba(255,215,0,0.25) 100%);
+      border: 1.5px solid rgba(255,215,0,0.8);
+      box-shadow: 0 0 30px rgba(255,165,0,0.35);
+      animation: grandPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes grandPulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(255,165,0,0.3); }
+      50% { box-shadow: 0 0 40px rgba(255,165,0,0.55); }
+    }
+
+    .day-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(255,255,255,0.4);
+    }
+
+    .day-card.claimed .day-label,
+    .day-card.today .day-label {
+      color: rgba(255,255,255,0.65);
+    }
+
+    .day-icon {
+      font-size: 1.6rem;
+      line-height: 1;
+      transition: transform 0.2s;
+    }
+
+    .day-card.locked .day-icon {
+      filter: grayscale(1);
+      opacity: 0.3;
+    }
+
+    .day-prize-name {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.5);
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    .day-card.claimed .day-prize-name {
+      color: rgba(255,215,0,0.8);
+    }
+
+    .day-card.today .day-prize-name {
+      color: rgba(255,255,255,0.85);
+    }
+
+    /* Stamp overlay */
+    .stamp-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .stamp-mark {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,215,0,0.9) 0%, rgba(255,180,0,0.85) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      box-shadow:
+        0 0 0 2px rgba(255,215,0,0.6),
+        0 0 0 4px rgba(255,215,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.3);
+      opacity: 0;
+      transform: scale(0);
+      transition: none;
+    }
+
+    .day-card.claimed .stamp-mark {
+      opacity: 1;
+      transform: scale(1) rotate(-12deg);
+    }
+
+    .stamp-mark.animating {
+      animation: stampIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    @keyframes stampIn {
+      0% { opacity: 0; transform: scale(2.5) rotate(-20deg); }
+      60% { opacity: 1; transform: scale(0.85) rotate(-8deg); }
+      80% { transform: scale(1.1) rotate(-14deg); }
+      100% { opacity: 1; transform: scale(1) rotate(-12deg); }
+    }
+
+    /* Check-in button */
+    .checkin-btn {
+      width: 100%;
+      margin-top: 4px;
+      padding: 13px 20px;
+      border-radius: 14px;
+      border: none;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.3px;
+    }
+
+    .checkin-btn.active {
+      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(108,92,231,0.5);
+    }
+
+    .checkin-btn.active:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(108,92,231,0.65);
+    }
+
+    .checkin-btn.active:active {
+      transform: translateY(0);
+    }
+
+    .checkin-btn.grand-btn {
+      background: linear-gradient(135deg, #ff6500, #ffd700);
+      color: #1a0a00;
+      box-shadow: 0 4px 24px rgba(255,165,0,0.5);
+    }
+
+    .checkin-btn.grand-btn:hover {
+      box-shadow: 0 6px 32px rgba(255,165,0,0.7);
+      transform: translateY(-1px);
+    }
+
+    .checkin-btn.done-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.4);
+      cursor: default;
+    }
+
+    /* Info footer */
+    .info-footer {
+      width: 100%;
+      text-align: center;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.4);
+      line-height: 1.5;
+    }
+
+    .info-footer strong {
+      color: rgba(255,255,255,0.65);
+    }
+
+    /* Prize popup overlay */
+    .popup-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      backdrop-filter: blur(4px);
+    }
+
+    .popup-overlay.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .popup-card {
+      background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+      border-radius: 24px;
+      padding: 32px 28px;
+      text-align: center;
+      max-width: 340px;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+      transform: scale(0.8) translateY(30px);
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .popup-overlay.visible .popup-card {
+      transform: scale(1) translateY(0);
+    }
+
+    .popup-card.grand-popup {
+      border-color: rgba(255,215,0,0.4);
+      box-shadow: 0 0 60px rgba(255,165,0,0.25);
+    }
+
+    .popup-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .popup-badge.common { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
+    .popup-badge.uncommon { background: rgba(0,210,100,0.2); color: #00d264; border: 1px solid rgba(0,210,100,0.3); }
+    .popup-badge.rare { background: rgba(108,92,231,0.25); color: #a29bfe; border: 1px solid rgba(108,92,231,0.4); }
+    .popup-badge.legendary { background: linear-gradient(135deg, rgba(255,100,0,0.3), rgba(255,215,0,0.3)); color: #ffd700; border: 1px solid rgba(255,215,0,0.5); }
+
+    .popup-icon {
+      font-size: 3.5rem;
+      line-height: 1;
+      margin-bottom: 12px;
+      display: block;
+      animation: popupIconBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.2s both;
+    }
+
+    @keyframes popupIconBounce {
+      0% { transform: scale(0); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .popup-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .popup-title.grand {
+      background: linear-gradient(135deg, #ff6500, #ffd700);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-size: 1.5rem;
+    }
+
+    .popup-description {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .popup-reward-box {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+    }
+
+    .popup-reward-box.grand-reward {
+      background: linear-gradient(135deg, rgba(255,165,0,0.12), rgba(255,215,0,0.08));
+      border-color: rgba(255,215,0,0.35);
+    }
+
+    .reward-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 6px;
+    }
+
+    .reward-value {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffd700;
+      word-break: break-all;
+    }
+
+    .reward-value.code {
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      letter-spacing: 1.5px;
+      background: rgba(255,215,0,0.1);
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    .reward-url {
+      font-size: 0.7rem;
+      color: rgba(108,92,231,0.8);
+      margin-top: 6px;
+      word-break: break-all;
+    }
+
+    .popup-close-btn {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: none;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(108,92,231,0.4);
+    }
+
+    .popup-close-btn.grand-close {
+      background: linear-gradient(135deg, #ff6500, #ffd700);
+      color: #1a0a00;
+      box-shadow: 0 4px 20px rgba(255,165,0,0.5);
+    }
+
+    .popup-close-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(108,92,231,0.55);
+    }
+
+    .popup-close-btn.grand-close:hover {
+      box-shadow: 0 6px 24px rgba(255,165,0,0.65);
+    }
+
+    /* Confetti canvas */
+    #confetti-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1100;
+    }
+
+    /* Sparkle particles for non-grand */
+    .sparkle {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1050;
+      font-size: 1.2rem;
+      animation: sparkleFly 1.2s ease-out forwards;
+    }
+
+    @keyframes sparkleFly {
+      0% { opacity: 1; transform: translate(0, 0) scale(1); }
+      100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.3); }
+    }
+
+    /* Today highlight ring */
+    .today-ring {
+      position: absolute;
+      inset: -2px;
+      border-radius: 15px;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    .day-card.today:not(.done) .today-ring {
+      animation: ringPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes ringPulse {
+      0%, 100% { box-shadow: inset 0 0 0 1.5px rgba(108,92,231,0.5); }
+      50% { box-shadow: inset 0 0 0 1.5px rgba(108,92,231,1), 0 0 12px rgba(108,92,231,0.4); }
+    }
+
+    /* Locked lock icon */
+    .lock-icon {
+      position: absolute;
+      top: 7px;
+      right: 8px;
+      font-size: 0.75rem;
+      opacity: 0.3;
+    }
+
+    /* "Come back tomorrow" section */
+    .comeback-section {
+      width: 100%;
+      text-align: center;
+      padding: 16px;
+      background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,215,0,0.03));
+      border: 1px solid rgba(255,215,0,0.2);
+      border-radius: 14px;
+      margin-bottom: 16px;
+    }
+
+    .comeback-icon {
+      font-size: 1.8rem;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .comeback-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #ffd700;
+      margin-bottom: 4px;
+    }
+
+    .comeback-text {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.5);
+    }
+
+    .countdown-timer {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #a29bfe;
+      margin-top: 8px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Reset button */
+    .reset-btn {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.2);
+      font-size: 0.72rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      margin-top: 4px;
+    }
+
+    .reset-btn:hover {
+      color: rgba(255,255,255,0.5);
+      background: rgba(255,255,255,0.05);
+    }
+
+    /* Prize legend */
+    .prize-legend {
+      width: 100%;
+      margin-bottom: 16px;
+    }
+
+    .prize-legend-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: rgba(255,255,255,0.35);
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .prize-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .prize-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      transition: background 0.2s;
+    }
+
+    .prize-item.active-prize {
+      background: rgba(108,92,231,0.12);
+      border-color: rgba(108,92,231,0.3);
+    }
+
+    .prize-item.claimed-prize {
+      background: rgba(255,215,0,0.06);
+      border-color: rgba(255,215,0,0.15);
+    }
+
+    .prize-item.grand-prize-item {
+      background: linear-gradient(135deg, rgba(255,100,0,0.1), rgba(255,215,0,0.07));
+      border-color: rgba(255,165,0,0.25);
+    }
+
+    .prize-day-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.4);
+      min-width: 32px;
+      text-align: center;
+    }
+
+    .prize-item.claimed-prize .prize-day-badge { color: #ffd700; }
+    .prize-item.active-prize .prize-day-badge { color: #a29bfe; }
+
+    .prize-item-icon { font-size: 1rem; }
+
+    .prize-item-name {
+      flex: 1;
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.55);
+    }
+
+    .prize-item.claimed-prize .prize-item-name { color: rgba(255,215,0,0.7); }
+    .prize-item.active-prize .prize-item-name { color: rgba(255,255,255,0.85); }
+    .prize-item.grand-prize-item .prize-item-name { color: rgba(255,165,0,0.9); }
+
+    .prize-check {
+      font-size: 0.9rem;
+      opacity: 0;
+    }
+
+    .prize-item.claimed-prize .prize-check { opacity: 1; }
+
+    /* Responsive tweaks */
+    @media (max-width: 380px) {
+      .days-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .day-card:last-child {
+        grid-column: 2 / 3;
+      }
+      .title { font-size: 1.45rem; }
+    }
+
+    @media (min-width: 480px) {
+      .days-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="confetti-canvas"></canvas>
+
+  <div class="container">
+    <a href="../index.html" class="back-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+      Back
+    </a>
+
+    <div class="header">
+      <span class="header-icon">🎫</span>
+      <h1 class="title">Daily Check-in Bonus</h1>
+      <p class="subtitle">Log in every day to earn exclusive rewards</p>
+    </div>
+
+    <div class="streak-banner">
+      <div class="streak-info">
+        <span class="streak-fire">🔥</span>
+        <div>
+          <div class="streak-label">Current Streak</div>
+          <div class="streak-count" id="streak-count">0 Days</div>
+        </div>
+      </div>
+      <div class="streak-status">
+        <span class="status-badge" id="status-badge">Loading...</span>
+      </div>
+    </div>
+
+    <div class="days-grid" id="days-grid">
+      <!-- Cards are injected by JS -->
+    </div>
+
+    <div class="comeback-section" id="comeback-section" style="display:none;">
+      <span class="comeback-icon">⏰</span>
+      <div class="comeback-title">Come back tomorrow!</div>
+      <div class="comeback-text">Your next reward will be available in</div>
+      <div class="countdown-timer" id="countdown-timer">23:59:59</div>
+    </div>
+
+    <button class="checkin-btn" id="main-checkin-btn" style="display:none;">Check In Now</button>
+
+    <div class="prize-legend">
+      <div class="prize-legend-title">Weekly Reward Schedule</div>
+      <div class="prize-list" id="prize-list">
+        <!-- injected by JS -->
+      </div>
+    </div>
+
+    <div class="info-footer">
+      Complete 7 days for the <strong>Grand Prize Room Voucher</strong>.<br>
+      Streak resets after Day 7 — a new cycle begins!
+    </div>
+
+    <button class="reset-btn" id="reset-btn" onclick="resetProgress()">Reset Progress (Dev)</button>
+  </div>
+
+  <!-- Prize Popup -->
+  <div class="popup-overlay" id="popup-overlay">
+    <div class="popup-card" id="popup-card">
+      <span class="popup-badge" id="popup-badge">Common</span>
+      <span class="popup-icon" id="popup-icon">🎁</span>
+      <div class="popup-title" id="popup-title">Day 1 Reward</div>
+      <div class="popup-description" id="popup-description">You've earned your daily reward!</div>
+      <div class="popup-reward-box" id="popup-reward-box">
+        <div class="reward-label">YOUR REWARD</div>
+        <div class="reward-value" id="popup-reward-value">+50 Points</div>
+        <div class="reward-url" id="popup-reward-url" style="display:none;"></div>
+      </div>
+      <button class="popup-close-btn" id="popup-close-btn" onclick="closePopup()">Awesome!</button>
+    </div>
+  </div>
+
+  <script>
+    // ─── Data ───────────────────────────────────────────────────────────────────
+
+    const PRIZES = [
+      {
+        day: 1,
+        icon: '⭐',
+        name: '+50 Points',
+        shortName: '50 Points',
+        tier: 'common',
+        tierLabel: 'Common',
+        description: "Great start! You've earned loyalty points.",
+        rewardDisplay: '+50 Points',
+        isCode: false,
+        url: null
+      },
+      {
+        day: 2,
+        icon: '⭐',
+        name: '+100 Points',
+        shortName: '100 Points',
+        tier: 'common',
+        tierLabel: 'Common',
+        description: "Keep it up! Double the points today.",
+        rewardDisplay: '+100 Points',
+        isCode: false,
+        url: null
+      },
+      {
+        day: 3,
+        icon: '🎟️',
+        name: '5% Off Code',
+        shortName: '5% Off',
+        tier: 'uncommon',
+        tierLabel: 'Uncommon',
+        description: "A promo code for 5% off your next booking!",
+        rewardDisplay: 'BOOK5OFF',
+        isCode: true,
+        url: 'ibookingu5.myghs.com/demo'
+      },
+      {
+        day: 4,
+        icon: '💎',
+        name: '+200 Points',
+        shortName: '200 Points',
+        tier: 'uncommon',
+        tierLabel: 'Uncommon',
+        description: "Halfway there! Enjoy a big points boost.",
+        rewardDisplay: '+200 Points',
+        isCode: false,
+        url: null
+      },
+      {
+        day: 5,
+        icon: '🎫',
+        name: '10% Off Code',
+        shortName: '10% Off',
+        tier: 'rare',
+        tierLabel: 'Rare',
+        description: "10% off your next room booking. Nice!",
+        rewardDisplay: 'DISC10OFF',
+        isCode: true,
+        url: 'ibookingu5.myghs.com/demo'
+      },
+      {
+        day: 6,
+        icon: '🏷️',
+        name: '15% Off Code',
+        shortName: '15% Off',
+        tier: 'rare',
+        tierLabel: 'Rare',
+        description: "Almost at the grand prize! 15% off — treat yourself.",
+        rewardDisplay: 'DISC15OFF',
+        isCode: true,
+        url: 'ibookingu5.myghs.com/demo'
+      },
+      {
+        day: 7,
+        icon: '🏨',
+        name: 'Room Voucher 500K',
+        shortName: 'Voucher 500K',
+        tier: 'legendary',
+        tierLabel: 'Legendary',
+        description: "GRAND PRIZE! A room voucher worth 500,000 VND. Congratulations!",
+        rewardDisplay: 'LUCKY500K',
+        isCode: true,
+        url: 'ibookingu5.myghs.com/demo'
+      }
+    ];
+
+    // ─── State ───────────────────────────────────────────────────────────────────
+
+    const STORAGE_KEY = 'daily_checkin_v1';
+
+    function getState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return defaultState();
+        const s = JSON.parse(raw);
+        // Migrate if needed
+        if (!s.version || s.version < 1) return defaultState();
+        return s;
+      } catch {
+        return defaultState();
+      }
+    }
+
+    function defaultState() {
+      return {
+        version: 1,
+        currentDay: 1,       // 1–7, next day to claim
+        lastCheckinDate: null, // ISO date string (YYYY-MM-DD)
+        claimedDays: []       // array of day numbers (1–7) that are claimed this cycle
+      };
+    }
+
+    function saveState(s) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    }
+
+    function todayStr() {
+      const d = new Date();
+      return d.toISOString().slice(0, 10);
+    }
+
+    function hasCheckedInToday(s) {
+      return s.lastCheckinDate === todayStr();
+    }
+
+    // ─── Render ──────────────────────────────────────────────────────────────────
+
+    let state = getState();
+    let countdownInterval = null;
+
+    function render() {
+      state = getState();
+      const grid = document.getElementById('days-grid');
+      const prizeList = document.getElementById('prize-list');
+      const streakEl = document.getElementById('streak-count');
+      const statusBadge = document.getElementById('status-badge');
+      const comebackSection = document.getElementById('comeback-section');
+      const mainBtn = document.getElementById('main-checkin-btn');
+
+      const checkedInToday = hasCheckedInToday(state);
+      const currentDay = state.currentDay; // next day to claim (or day in progress)
+      const claimedDays = state.claimedDays;
+
+      // Streak = number of claimed days in this cycle
+      const streakDays = claimedDays.length;
+      streakEl.textContent = streakDays + (streakDays === 1 ? ' Day' : ' Days');
+
+      // Status badge
+      if (checkedInToday) {
+        statusBadge.textContent = 'Checked In ✓';
+        statusBadge.className = 'status-badge claimed';
+      } else if (currentDay <= 7) {
+        statusBadge.textContent = 'Ready to Claim!';
+        statusBadge.className = 'status-badge ready';
+      } else {
+        statusBadge.textContent = 'Cycle Complete';
+        statusBadge.className = 'status-badge claimed';
+      }
+
+      // Build day cards
+      grid.innerHTML = '';
+      for (let i = 1; i <= 7; i++) {
+        const prize = PRIZES[i - 1];
+        const isClaimed = claimedDays.includes(i);
+        const isToday = (i === currentDay);
+        const isDone = isToday && checkedInToday;
+        const isLocked = (i > currentDay);
+        const isGrand = (i === 7);
+
+        const card = document.createElement('div');
+        card.className = 'day-card';
+        if (isClaimed) card.classList.add('claimed');
+        else if (isToday && isDone) { card.classList.add('today', 'done'); }
+        else if (isToday) { card.classList.add('today'); }
+        else if (isLocked) card.classList.add('locked');
+        if (isGrand) card.classList.add('grand');
+
+        card.dataset.day = i;
+
+        card.innerHTML = `
+          <div class="today-ring"></div>
+          ${isLocked ? '<span class="lock-icon">🔒</span>' : ''}
+          <span class="day-label">Day ${i}</span>
+          <span class="day-icon">${prize.icon}</span>
+          <span class="day-prize-name">${prize.shortName}</span>
+          <div class="stamp-overlay">
+            <div class="stamp-mark">✓</div>
+          </div>
+        `;
+
+        if (isToday && !isDone) {
+          card.addEventListener('click', () => doCheckin(i));
+        }
+
+        grid.appendChild(card);
+      }
+
+      // Prize legend
+      prizeList.innerHTML = '';
+      for (let i = 1; i <= 7; i++) {
+        const prize = PRIZES[i - 1];
+        const isClaimed = claimedDays.includes(i);
+        const isToday = (i === currentDay) && !checkedInToday;
+        const isGrand = (i === 7);
+
+        const item = document.createElement('div');
+        item.className = 'prize-item';
+        if (isClaimed) item.classList.add('claimed-prize');
+        else if (isToday) item.classList.add('active-prize');
+        if (isGrand) item.classList.add('grand-prize-item');
+
+        item.innerHTML = `
+          <span class="prize-day-badge">Day ${i}</span>
+          <span class="prize-item-icon">${prize.icon}</span>
+          <span class="prize-item-name">${prize.name}</span>
+          <span class="prize-check">✓</span>
+        `;
+
+        prizeList.appendChild(item);
+      }
+
+      // Main check-in button + comeback section
+      if (checkedInToday) {
+        comebackSection.style.display = '';
+        mainBtn.style.display = 'none';
+        startCountdown();
+      } else if (currentDay <= 7) {
+        comebackSection.style.display = 'none';
+        mainBtn.style.display = '';
+        mainBtn.className = 'checkin-btn' + (currentDay === 7 ? ' grand-btn' : ' active');
+        mainBtn.textContent = currentDay === 7 ? '🏨 Claim Grand Prize!' : '✨ Check In — Day ' + currentDay;
+        mainBtn.onclick = () => doCheckin(currentDay);
+        stopCountdown();
+      } else {
+        // Shouldn't normally reach here as cycle resets, but handle gracefully
+        comebackSection.style.display = 'none';
+        mainBtn.style.display = '';
+        mainBtn.className = 'checkin-btn done-btn';
+        mainBtn.textContent = 'Cycle Complete';
+        mainBtn.onclick = null;
+      }
+    }
+
+    // ─── Check-in logic ──────────────────────────────────────────────────────────
+
+    function doCheckin(day) {
+      if (hasCheckedInToday(state)) return;
+      if (day !== state.currentDay) return;
+
+      // Update state
+      state.lastCheckinDate = todayStr();
+      state.claimedDays.push(day);
+
+      // Advance to next day, or reset after day 7
+      if (day >= 7) {
+        state.currentDay = 1;
+        state.claimedDays = [];
+      } else {
+        state.currentDay = day + 1;
+      }
+
+      saveState(state);
+
+      // Animate stamp on the card
+      const card = document.querySelector(`.day-card[data-day="${day}"]`);
+      if (card) {
+        const stampMark = card.querySelector('.stamp-mark');
+        if (stampMark) {
+          stampMark.classList.add('animating');
+          stampMark.addEventListener('animationend', () => {
+            stampMark.classList.remove('animating');
+          }, { once: true });
+        }
+        card.classList.add('claimed');
+        card.classList.remove('today');
+      }
+
+      // Show popup
+      setTimeout(() => {
+        showPrizePopup(day);
+        render();
+      }, 400);
+    }
+
+    // ─── Prize Popup ─────────────────────────────────────────────────────────────
+
+    function showPrizePopup(day) {
+      const prize = PRIZES[day - 1];
+      const overlay = document.getElementById('popup-overlay');
+      const card = document.getElementById('popup-card');
+      const badge = document.getElementById('popup-badge');
+      const icon = document.getElementById('popup-icon');
+      const title = document.getElementById('popup-title');
+      const desc = document.getElementById('popup-description');
+      const rewardBox = document.getElementById('popup-reward-box');
+      const rewardVal = document.getElementById('popup-reward-value');
+      const rewardUrl = document.getElementById('popup-reward-url');
+      const closeBtn = document.getElementById('popup-close-btn');
+
+      badge.textContent = prize.tierLabel;
+      badge.className = 'popup-badge ' + prize.tier;
+      icon.textContent = prize.icon;
+
+      if (day === 7) {
+        title.textContent = 'Grand Prize!';
+        title.className = 'popup-title grand';
+        card.classList.add('grand-popup');
+        closeBtn.className = 'popup-close-btn grand-close';
+      } else {
+        title.textContent = 'Day ' + day + ' Reward!';
+        title.className = 'popup-title';
+        card.classList.remove('grand-popup');
+        closeBtn.className = 'popup-close-btn';
+      }
+
+      desc.textContent = prize.description;
+
+      if (prize.isCode) {
+        rewardBox.className = 'popup-reward-box' + (day === 7 ? ' grand-reward' : '');
+        rewardVal.className = 'reward-value code';
+        rewardVal.textContent = prize.rewardDisplay;
+        if (prize.url) {
+          rewardUrl.style.display = '';
+          rewardUrl.innerHTML = 'Use at: <a href="https://' + prize.url + '" target="_blank" style="color:#a29bfe;">' + prize.url + '</a>';
+        } else {
+          rewardUrl.style.display = 'none';
+        }
+      } else {
+        rewardBox.className = 'popup-reward-box';
+        rewardVal.className = 'reward-value';
+        rewardVal.textContent = prize.rewardDisplay;
+        rewardUrl.style.display = 'none';
+      }
+
+      overlay.classList.add('visible');
+
+      // Particle effects
+      if (day === 7) {
+        launchConfetti();
+      } else {
+        launchSparkles();
+      }
+    }
+
+    function closePopup() {
+      const overlay = document.getElementById('popup-overlay');
+      overlay.classList.remove('visible');
+      stopConfetti();
+    }
+
+    // Close popup on overlay click
+    document.getElementById('popup-overlay').addEventListener('click', function(e) {
+      if (e.target === this) closePopup();
+    });
+
+    // ─── Confetti (Day 7) ────────────────────────────────────────────────────────
+
+    let confettiAnimFrame = null;
+    let confettiParticles = [];
+
+    function launchConfetti() {
+      const canvas = document.getElementById('confetti-canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const colors = ['#ffd700', '#ff6b6b', '#6c5ce7', '#00cec9', '#fd79a8', '#a29bfe', '#ff9f43', '#ffffff'];
+      confettiParticles = [];
+
+      for (let i = 0; i < 180; i++) {
+        confettiParticles.push({
+          x: Math.random() * canvas.width,
+          y: -10 - Math.random() * 200,
+          w: 6 + Math.random() * 8,
+          h: 3 + Math.random() * 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          vx: (Math.random() - 0.5) * 3,
+          vy: 2 + Math.random() * 4,
+          rot: Math.random() * Math.PI * 2,
+          rotV: (Math.random() - 0.5) * 0.15,
+          alpha: 1
+        });
+      }
+
+      function animateConfetti() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let alive = false;
+        confettiParticles.forEach(p => {
+          if (p.y > canvas.height + 20) return;
+          alive = true;
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.05;
+          p.rot += p.rotV;
+          if (p.y > canvas.height * 0.7) p.alpha -= 0.015;
+          if (p.alpha <= 0) return;
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+          ctx.restore();
+        });
+        if (alive) {
+          confettiAnimFrame = requestAnimationFrame(animateConfetti);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      if (confettiAnimFrame) cancelAnimationFrame(confettiAnimFrame);
+      confettiAnimFrame = requestAnimationFrame(animateConfetti);
+    }
+
+    function stopConfetti() {
+      if (confettiAnimFrame) {
+        cancelAnimationFrame(confettiAnimFrame);
+        confettiAnimFrame = null;
+      }
+      const canvas = document.getElementById('confetti-canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // ─── Sparkles (Days 1-6) ─────────────────────────────────────────────────────
+
+    function launchSparkles() {
+      const sparks = ['✨', '⭐', '💫', '🌟', '✦', '✧'];
+      const popup = document.getElementById('popup-card');
+      const rect = popup.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+
+      for (let i = 0; i < 14; i++) {
+        setTimeout(() => {
+          const el = document.createElement('span');
+          el.className = 'sparkle';
+          el.textContent = sparks[Math.floor(Math.random() * sparks.length)];
+          const angle = (i / 14) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+          const dist = 80 + Math.random() * 80;
+          const tx = Math.cos(angle) * dist;
+          const ty = Math.sin(angle) * dist - 40;
+          el.style.left = (cx - 12) + 'px';
+          el.style.top = (cy - 12) + 'px';
+          el.style.setProperty('--tx', tx + 'px');
+          el.style.setProperty('--ty', ty + 'px');
+          document.body.appendChild(el);
+          el.addEventListener('animationend', () => el.remove());
+        }, i * 40);
+      }
+    }
+
+    // ─── Countdown timer ─────────────────────────────────────────────────────────
+
+    function stopCountdown() {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+    }
+
+    function startCountdown() {
+      stopCountdown();
+      updateCountdown();
+      countdownInterval = setInterval(updateCountdown, 1000);
+    }
+
+    function updateCountdown() {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setHours(24, 0, 0, 0);
+      const diff = tomorrow - now;
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      const pad = n => String(n).padStart(2, '0');
+      const el = document.getElementById('countdown-timer');
+      if (el) el.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+    }
+
+    // ─── Reset ───────────────────────────────────────────────────────────────────
+
+    function resetProgress() {
+      if (!confirm('Reset all check-in progress?')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      state = defaultState();
+      render();
+    }
+
+    // ─── Init ────────────────────────────────────────────────────────────────────
+
+    render();
+  </script>
+</body>
+</html>

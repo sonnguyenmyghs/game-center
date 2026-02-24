@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Gacha Machine — Game Center</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: #0a0a1a;
+      color: #fff;
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+      overflow-y: auto;
+      user-select: none;
+      -webkit-user-select: none;
+      padding-bottom: 40px;
+    }
+
+    /* ── Back button ── */
+    .back-btn {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 200;
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #fff;
+      font-size: 14px;
+      padding: 8px 16px;
+      border-radius: 24px;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .back-btn:hover { background: rgba(255,255,255,0.15); }
+    .back-btn:active { transform: scale(0.95); }
+    .back-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+    /* ── Title ── */
+    .title {
+      margin-top: 60px;
+      font-size: clamp(26px, 6vw, 40px);
+      font-weight: 900;
+      text-align: center;
+      background: linear-gradient(135deg, #ff6b9d, #ffd700, #ff6b9d);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: titleShimmer 3s ease infinite;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    @keyframes titleShimmer {
+      0%,100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+      text-align: center;
+      letter-spacing: 1px;
+    }
+
+    /* ── Pull counter ── */
+    .pull-counter {
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 8px 18px;
+      font-size: 14px;
+      color: rgba(255,255,255,0.8);
+    }
+    .pull-pips {
+      display: flex;
+      gap: 5px;
+    }
+    .pip {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.3);
+      background: transparent;
+      transition: background 0.3s, border-color 0.3s;
+    }
+    .pip.filled {
+      background: #ffd700;
+      border-color: #ffd700;
+      box-shadow: 0 0 6px #ffd700;
+    }
+
+    /* ── Machine wrapper ── */
+    .machine-area {
+      margin-top: 20px;
+      display: flex;
+      align-items: flex-end;
+      gap: 0;
+      position: relative;
+    }
+
+    /* ── Machine body ── */
+    .machine {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: min(280px, 78vw);
+    }
+
+    /* Globe */
+    .globe-outer {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.35), rgba(180,220,255,0.15) 50%, rgba(80,120,200,0.2));
+      border: 4px solid rgba(200,220,255,0.4);
+      box-shadow:
+        0 0 0 6px rgba(150,180,230,0.25),
+        0 0 0 10px rgba(100,140,200,0.12),
+        inset 0 0 40px rgba(100,150,255,0.15),
+        0 8px 32px rgba(0,0,50,0.6);
+      position: relative;
+      overflow: hidden;
+      cursor: default;
+    }
+    /* Glass shine overlay */
+    .globe-outer::before {
+      content: '';
+      position: absolute;
+      top: 8%;
+      left: 12%;
+      width: 38%;
+      height: 30%;
+      background: radial-gradient(ellipse, rgba(255,255,255,0.55), transparent);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    /* Globe rim */
+    .globe-outer::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.2);
+      pointer-events: none;
+    }
+
+    /* Capsules floating inside globe */
+    .globe-capsules {
+      position: absolute;
+      inset: 12%;
+      display: flex;
+      flex-wrap: wrap;
+      align-content: center;
+      justify-content: center;
+      gap: 6px;
+      pointer-events: none;
+    }
+    .mini-cap {
+      width: 28px;
+      height: 20px;
+      border-radius: 10px;
+      opacity: 0.85;
+      animation: floatCap 2.5s ease-in-out infinite;
+    }
+    .mini-cap:nth-child(1) { background: linear-gradient(135deg, #aaa, #ccc); animation-delay: 0s; }
+    .mini-cap:nth-child(2) { background: linear-gradient(135deg, #2ecc71, #27ae60); animation-delay: 0.4s; }
+    .mini-cap:nth-child(3) { background: linear-gradient(135deg, #3498db, #2980b9); animation-delay: 0.8s; }
+    .mini-cap:nth-child(4) { background: linear-gradient(135deg, #9b59b6, #8e44ad); animation-delay: 1.2s; }
+    .mini-cap:nth-child(5) { background: linear-gradient(135deg, #f1c40f, #e67e22); animation-delay: 1.6s; }
+    .mini-cap:nth-child(6) { background: linear-gradient(135deg, #e74c3c, #c0392b); animation-delay: 0.2s; }
+    .mini-cap:nth-child(7) { background: linear-gradient(135deg, #1abc9c, #16a085); animation-delay: 0.6s; }
+    .mini-cap:nth-child(8) { background: linear-gradient(135deg, #aaa, #ccc); animation-delay: 1.0s; }
+    .mini-cap:nth-child(9) { background: linear-gradient(135deg, #3498db, #2980b9); animation-delay: 1.4s; }
+    @keyframes floatCap {
+      0%,100% { transform: translateY(0px) rotate(-5deg); }
+      50% { transform: translateY(-8px) rotate(5deg); }
+    }
+    .globe-capsules.shaking .mini-cap {
+      animation: shakeCap 0.1s linear infinite;
+    }
+    @keyframes shakeCap {
+      0%   { transform: translate(-2px,-2px) rotate(-8deg); }
+      25%  { transform: translate( 2px,-4px) rotate( 8deg); }
+      50%  { transform: translate(-3px, 2px) rotate(-5deg); }
+      75%  { transform: translate( 3px, 3px) rotate( 5deg); }
+      100% { transform: translate(-2px,-2px) rotate(-8deg); }
+    }
+
+    /* Globe neck / collar */
+    .globe-neck {
+      width: 55%;
+      height: 14px;
+      background: linear-gradient(180deg, #c0392b, #922b21);
+      border-radius: 0 0 4px 4px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+      position: relative;
+      z-index: 2;
+    }
+    .globe-neck::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 120%;
+      height: 6px;
+      background: linear-gradient(180deg, #e74c3c, #c0392b);
+      border-radius: 4px 4px 0 0;
+    }
+
+    /* Machine body */
+    .machine-body {
+      width: 100%;
+      background: linear-gradient(180deg, #c0392b 0%, #e74c3c 20%, #c0392b 60%, #922b21 100%);
+      border-radius: 16px 16px 8px 8px;
+      padding: 16px 16px 20px;
+      box-shadow:
+        inset 2px 0 0 rgba(255,255,255,0.15),
+        inset -2px 0 0 rgba(0,0,0,0.3),
+        0 8px 24px rgba(0,0,0,0.6);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Silver band */
+    .silver-band {
+      width: calc(100% + 32px);
+      margin-left: -16px;
+      height: 18px;
+      background: linear-gradient(180deg,
+        #ecf0f1 0%,
+        #bdc3c7 30%,
+        #95a5a6 50%,
+        #bdc3c7 70%,
+        #ecf0f1 100%
+      );
+      margin-top: -4px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+
+    /* Logo plate */
+    .logo-plate {
+      background: linear-gradient(135deg, #2c2c2c, #1a1a1a);
+      border: 2px solid #c0a030;
+      border-radius: 8px;
+      padding: 6px 12px;
+      text-align: center;
+      margin-bottom: 12px;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.5), 0 0 10px rgba(192,160,48,0.3);
+    }
+    .logo-plate span {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #ffd700;
+      text-transform: uppercase;
+    }
+
+    /* Coin slot area */
+    .coin-slot-area {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .coin-slot {
+      flex: 1;
+      height: 6px;
+      background: #1a1a1a;
+      border-radius: 3px;
+      border: 1px solid #555;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+    }
+    .coin-slot-label {
+      font-size: 9px;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    /* Crank button */
+    .crank-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(180deg, #27ae60, #1e8449);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow:
+        0 4px 0 #145a32,
+        0 6px 12px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+      transition: transform 0.1s, box-shadow 0.1s;
+      text-transform: uppercase;
+      position: relative;
+      overflow: hidden;
+    }
+    .crank-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s;
+    }
+    .crank-btn:hover::before { left: 140%; }
+    .crank-btn:hover {
+      background: linear-gradient(180deg, #2ecc71, #27ae60);
+    }
+    .crank-btn:active, .crank-btn.pressed {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #145a32, 0 2px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    .crank-btn:disabled {
+      background: linear-gradient(180deg, #555, #444);
+      box-shadow: 0 4px 0 #222, 0 6px 12px rgba(0,0,0,0.4);
+      cursor: not-allowed;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* Capsule output slot */
+    .output-slot-area {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+    .slot-ramp {
+      width: 70%;
+      height: 24px;
+      background: linear-gradient(180deg, #1a1a1a 0%, #2c2c2c 100%);
+      border-radius: 12px 12px 0 0;
+      border: 2px solid #444;
+      border-bottom: none;
+      position: relative;
+    }
+    .slot-opening {
+      width: 60%;
+      height: 40px;
+      background: #0a0a0a;
+      border: 3px solid #555;
+      border-radius: 8px;
+      border-top: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: visible;
+    }
+
+    /* ── Crank handle (decorative, right side) ── */
+    .crank-handle-wrap {
+      position: absolute;
+      right: -52px;
+      bottom: 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .crank-shaft {
+      width: 14px;
+      height: 60px;
+      background: linear-gradient(90deg, #bdc3c7, #ecf0f1, #bdc3c7);
+      border-radius: 4px;
+      box-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    .crank-arm {
+      width: 36px;
+      height: 10px;
+      background: linear-gradient(180deg, #bdc3c7, #95a5a6);
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+      transform-origin: 7px center;
+      transition: transform 0.15s;
+    }
+    .crank-knob {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #e74c3c, #922b21);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+      margin-top: -5px;
+      margin-left: 22px;
+    }
+    .crank-handle-wrap.spinning .crank-arm {
+      animation: crankSpin 0.3s linear infinite;
+    }
+    @keyframes crankSpin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    /* ── Dropped capsule ── */
+    .dropped-capsule {
+      width: 54px;
+      height: 38px;
+      border-radius: 19px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-60px);
+      opacity: 0;
+      transition: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      z-index: 10;
+    }
+    .dropped-capsule.drop-anim {
+      animation: capsuleDrop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    .dropped-capsule.wiggle {
+      animation: capsuleWiggle 0.5s ease-in-out;
+    }
+    @keyframes capsuleDrop {
+      0%   { opacity: 0; transform: translateX(-50%) translateY(-80px); }
+      60%  { opacity: 1; transform: translateX(-50%) translateY(10px); }
+      80%  { transform: translateX(-50%) translateY(-6px); }
+      100% { opacity: 1; transform: translateX(-50%) translateY(0px); }
+    }
+    @keyframes capsuleWiggle {
+      0%,100% { transform: translateX(-50%) rotate(0deg); }
+      20% { transform: translateX(-50%) rotate(-10deg); }
+      40% { transform: translateX(-50%) rotate(10deg); }
+      60% { transform: translateX(-50%) rotate(-6deg); }
+      80% { transform: translateX(-50%) rotate(6deg); }
+    }
+    .dropped-capsule .cap-label {
+      font-size: 9px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.9);
+      letter-spacing: 0.5px;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+      pointer-events: none;
+    }
+    .dropped-capsule .tap-hint {
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      color: rgba(255,255,255,0.6);
+      white-space: nowrap;
+      animation: pulse 1s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+
+    /* capsule halves for open animation */
+    .cap-top, .cap-bottom {
+      position: absolute;
+      width: 100%;
+      height: 50%;
+      border-radius: inherit;
+      transition: transform 0.4s ease;
+    }
+    .cap-top { top: 0; }
+    .cap-bottom { bottom: 0; }
+    .dropped-capsule.opening .cap-top {
+      transform: translateY(-120%) rotate(-20deg);
+    }
+    .dropped-capsule.opening .cap-bottom {
+      transform: translateY(120%) rotate(20deg);
+    }
+
+    /* ── Legs ── */
+    .machine-legs {
+      display: flex;
+      justify-content: space-around;
+      width: 70%;
+      margin-top: 0;
+    }
+    .leg {
+      width: 14px;
+      height: 28px;
+      background: linear-gradient(180deg, #95a5a6, #7f8c8d);
+      border-radius: 0 0 6px 6px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    }
+
+    /* ── Tabs ── */
+    .tabs-row {
+      margin-top: 24px;
+      display: flex;
+      gap: 6px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 4px;
+    }
+    .tab-btn {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 9px;
+      background: transparent;
+      color: rgba(255,255,255,0.5);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .tab-btn.active {
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+    }
+
+    /* ── Panel ── */
+    .panel {
+      width: min(360px, 92vw);
+      margin-top: 12px;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Pull history */
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      border-left: 3px solid transparent;
+      font-size: 13px;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .history-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .history-rarity {
+      font-weight: 700;
+      font-size: 11px;
+      min-width: 70px;
+    }
+    .history-prize { color: rgba(255,255,255,0.7); flex: 1; }
+    .history-time { font-size: 11px; color: rgba(255,255,255,0.3); white-space: nowrap; }
+
+    .empty-state {
+      text-align: center;
+      color: rgba(255,255,255,0.3);
+      padding: 30px;
+      font-size: 13px;
+    }
+
+    /* Collection */
+    .collection-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+    }
+    .collection-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      animation: slideIn 0.3s ease;
+    }
+    .collection-card .c-rarity {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .collection-card .c-prize {
+      font-size: 12px;
+      color: rgba(255,255,255,0.8);
+      line-height: 1.4;
+    }
+    .collection-card .c-count {
+      margin-top: 6px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+    }
+    .collection-card .c-code {
+      margin-top: 4px;
+      font-size: 11px;
+      font-family: monospace;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      padding: 2px 6px;
+      display: inline-block;
+      color: #ffd700;
+    }
+
+    /* ── Prize popup ── */
+    .popup-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    .popup-overlay.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .popup-box {
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      border: 2px solid rgba(255,255,255,0.15);
+      border-radius: 20px;
+      padding: 32px 28px;
+      max-width: 320px;
+      width: 90vw;
+      text-align: center;
+      transform: scale(0.8);
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    .popup-overlay.visible .popup-box {
+      transform: scale(1);
+    }
+    .popup-box::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at center, var(--rarity-glow, rgba(255,215,0,0.05)), transparent 60%);
+      pointer-events: none;
+    }
+    .popup-capsule-icon {
+      font-size: 52px;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 0 16px var(--rarity-color, #ffd700));
+      animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes popIn {
+      from { transform: scale(0) rotate(-20deg); }
+      to   { transform: scale(1) rotate(0deg); }
+    }
+    .popup-rarity {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--rarity-color, #ffd700);
+      margin-bottom: 8px;
+      text-shadow: 0 0 10px var(--rarity-color, #ffd700);
+    }
+    .popup-prize-name {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+    .popup-prize-detail {
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+    .popup-code {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-family: monospace;
+      font-size: 16px;
+      font-weight: 700;
+      color: #ffd700;
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+    }
+    .popup-link {
+      display: inline-block;
+      font-size: 12px;
+      color: #74b9ff;
+      text-decoration: underline;
+      margin-bottom: 16px;
+      word-break: break-all;
+    }
+    .popup-close {
+      background: linear-gradient(135deg, var(--rarity-color, #ffd700), var(--rarity-color2, #ff6b35));
+      border: none;
+      border-radius: 10px;
+      padding: 12px 28px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      transition: transform 0.15s;
+    }
+    .popup-close:hover { transform: scale(1.05); }
+    .popup-close:active { transform: scale(0.95); }
+
+    /* ── Confetti ── */
+    .confetti-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 400;
+      overflow: hidden;
+    }
+    .confetti-piece {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      top: -20px;
+      border-radius: 2px;
+      animation: confettiFall linear forwards;
+    }
+    @keyframes confettiFall {
+      0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    }
+
+    /* ── Legendary screen flash ── */
+    .screen-flash {
+      position: fixed;
+      inset: 0;
+      z-index: 350;
+      pointer-events: none;
+      opacity: 0;
+      border-radius: 0;
+    }
+    .screen-flash.flash {
+      animation: screenFlash 0.6s ease-out forwards;
+    }
+    @keyframes screenFlash {
+      0%   { opacity: 0.7; }
+      100% { opacity: 0; }
+    }
+
+    /* Rarity color classes */
+    .r-common    { color: #bdc3c7; }
+    .r-uncommon  { color: #2ecc71; }
+    .r-rare      { color: #3498db; }
+    .r-epic      { color: #9b59b6; }
+    .r-legendary { color: #f1c40f; }
+
+    .border-common    { border-color: #bdc3c7; }
+    .border-uncommon  { border-color: #2ecc71; }
+    .border-rare      { border-color: #3498db; }
+    .border-epic      { border-color: #9b59b6; }
+    .border-legendary { border-color: #f1c40f; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+    /* ── Rarity info row ── */
+    .rarity-info {
+      margin-top: 16px;
+      width: min(360px, 92vw);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+    }
+    .rarity-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 11px;
+    }
+    .rarity-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .rarity-badge span { color: rgba(255,255,255,0.6); }
+    .rarity-badge strong { color: rgba(255,255,255,0.9); margin-left: 2px; }
+
+    /* Responsive mobile tweaks */
+    @media (max-width: 360px) {
+      .machine { width: 90vw; }
+      .mini-cap { width: 22px; height: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Back button -->
+  <a class="back-btn" href="../index.html">
+    <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    Back
+  </a>
+
+  <!-- Title -->
+  <h1 class="title">Gacha Machine</h1>
+  <p class="subtitle">Japanese Capsule Toy Machine</p>
+
+  <!-- Pull counter -->
+  <div class="pull-counter">
+    <span>Daily Pulls:</span>
+    <div class="pull-pips">
+      <div class="pip" id="pip0"></div>
+      <div class="pip" id="pip1"></div>
+      <div class="pip" id="pip2"></div>
+    </div>
+    <span id="pullsLeft">3</span>/3 remaining
+  </div>
+
+  <!-- Machine -->
+  <div class="machine-area">
+    <div class="machine">
+
+      <!-- Globe -->
+      <div class="globe-outer">
+        <div class="globe-capsules" id="globeCapsules">
+          <div class="mini-cap"></div>
+          <div class="mini-cap"></div>
+          <div class="mini-cap"></div>
+          <div class="mini-cap"></div>
+          <div class="mini-cap"></div>
+          <div class="mini-cap"></div>
+          <div class="mini-cap"></div>
+          <div class="mini-cap"></div>
+          <div class="mini-cap"></div>
+        </div>
+      </div>
+
+      <!-- Neck -->
+      <div class="globe-neck"></div>
+
+      <!-- Body -->
+      <div class="machine-body">
+        <div class="silver-band"></div>
+        <div class="logo-plate"><span>Gacha Machine</span></div>
+
+        <div class="coin-slot-area">
+          <div class="coin-slot-label">INSERT</div>
+          <div class="coin-slot"></div>
+          <div class="coin-slot-label">COIN</div>
+        </div>
+
+        <button class="crank-btn" id="crankBtn" onclick="doPull()">
+          TURN CRANK &nbsp;&#x1F504;
+        </button>
+
+        <!-- Output slot -->
+        <div class="output-slot-area">
+          <div class="slot-ramp"></div>
+          <div class="slot-opening" id="slotOpening">
+            <div class="dropped-capsule" id="droppedCapsule" onclick="openCapsule()">
+              <div class="cap-top" id="capTop"></div>
+              <div class="cap-bottom" id="capBottom"></div>
+              <span class="cap-label" id="capLabel"></span>
+              <span class="tap-hint" id="tapHint">Tap to open!</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Legs -->
+      <div class="machine-legs">
+        <div class="leg"></div>
+        <div class="leg"></div>
+        <div class="leg"></div>
+      </div>
+
+      <!-- Crank handle (decorative) -->
+      <div class="crank-handle-wrap" id="crankHandle">
+        <div class="crank-arm">
+          <div style="display:flex;align-items:center;margin-left:20px;margin-top:-4px;">
+            <div class="crank-knob"></div>
+          </div>
+        </div>
+        <div class="crank-shaft"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rarity info -->
+  <div class="rarity-info">
+    <div class="rarity-badge">
+      <div class="rarity-dot" style="background:#bdc3c7"></div>
+      <span>Common</span><strong>50%</strong>
+    </div>
+    <div class="rarity-badge">
+      <div class="rarity-dot" style="background:#2ecc71"></div>
+      <span>Uncommon</span><strong>25%</strong>
+    </div>
+    <div class="rarity-badge">
+      <div class="rarity-dot" style="background:#3498db"></div>
+      <span>Rare</span><strong>15%</strong>
+    </div>
+    <div class="rarity-badge">
+      <div class="rarity-dot" style="background:#9b59b6"></div>
+      <span>Epic</span><strong>8%</strong>
+    </div>
+    <div class="rarity-badge">
+      <div class="rarity-dot" style="background:#f1c40f"></div>
+      <span>Legendary</span><strong>2%</strong>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-row" style="width: min(360px,92vw); margin-top: 20px;">
+    <button class="tab-btn active" onclick="switchTab('history')">Pull History</button>
+    <button class="tab-btn" onclick="switchTab('collection')">Collection</button>
+  </div>
+
+  <!-- Panels -->
+  <div class="panel">
+    <!-- History tab -->
+    <div class="tab-panel active" id="panel-history">
+      <div class="history-list" id="historyList">
+        <div class="empty-state" id="emptyHistory">No pulls yet — turn the crank!</div>
+      </div>
+    </div>
+
+    <!-- Collection tab -->
+    <div class="tab-panel" id="panel-collection">
+      <div class="collection-grid" id="collectionGrid">
+        <div class="empty-state" id="emptyCollection" style="grid-column: 1/-1;">No prizes collected yet!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prize popup -->
+  <div class="popup-overlay" id="popupOverlay" onclick="closePopup(event)">
+    <div class="popup-box" id="popupBox">
+      <div class="popup-capsule-icon" id="popupIcon">🎊</div>
+      <div class="popup-rarity" id="popupRarity">LEGENDARY</div>
+      <div class="popup-prize-name" id="popupPrizeName">Room Voucher 500K</div>
+      <div class="popup-prize-detail" id="popupPrizeDetail"></div>
+      <div class="popup-code" id="popupCode" style="display:none"></div>
+      <a class="popup-link" id="popupLink" href="#" target="_blank" style="display:none"></a>
+      <button class="popup-close" id="popupClose" onclick="closePopup(null)">Awesome!</button>
+    </div>
+  </div>
+
+  <!-- Confetti container -->
+  <div class="confetti-container" id="confettiContainer"></div>
+
+  <!-- Screen flash -->
+  <div class="screen-flash" id="screenFlash"></div>
+
+  <script>
+    // ─────────────────────────────────────────
+    // RARITY & PRIZE DATA
+    // ─────────────────────────────────────────
+    const RARITIES = [
+      {
+        id: 'common',
+        label: 'Common',
+        chance: 0.50,
+        color: '#bdc3c7',
+        color2: '#95a5a6',
+        icon: '⚪',
+        capsuleGrad: 'linear-gradient(135deg, #a0a0a0, #d0d0d0)',
+        glowColor: 'rgba(189,195,199,0.3)',
+        prizes: [
+          { name: '+50 Points', detail: 'Points added to your account.', code: null, link: null }
+        ]
+      },
+      {
+        id: 'uncommon',
+        label: 'Uncommon',
+        chance: 0.25,
+        color: '#2ecc71',
+        color2: '#27ae60',
+        icon: '🟢',
+        capsuleGrad: 'linear-gradient(135deg, #27ae60, #2ecc71)',
+        glowColor: 'rgba(46,204,113,0.3)',
+        prizes: [
+          { name: '+100 Points', detail: 'Points added to your account.', code: null, link: null },
+          { name: 'Promo: BOOK5OFF', detail: '5% off your next booking.', code: 'BOOK5OFF', link: 'https://ibookingu5.myghs.com/demo' }
+        ]
+      },
+      {
+        id: 'rare',
+        label: 'Rare',
+        chance: 0.15,
+        color: '#3498db',
+        color2: '#2980b9',
+        icon: '🔵',
+        capsuleGrad: 'linear-gradient(135deg, #2980b9, #3498db)',
+        glowColor: 'rgba(52,152,219,0.3)',
+        prizes: [
+          { name: '+200 Points', detail: 'Points added to your account.', code: null, link: null },
+          { name: '10% Off Booking', detail: '10% discount on your booking at ibookingu5.myghs.com/demo', code: 'DISC10OFF', link: 'https://ibookingu5.myghs.com/demo' }
+        ]
+      },
+      {
+        id: 'epic',
+        label: 'Epic',
+        chance: 0.08,
+        color: '#9b59b6',
+        color2: '#8e44ad',
+        icon: '🟣',
+        capsuleGrad: 'linear-gradient(135deg, #8e44ad, #9b59b6)',
+        glowColor: 'rgba(155,89,182,0.4)',
+        prizes: [
+          { name: '15% Off Room Booking', detail: 'Redeem at ibookingu5.myghs.com/demo', code: 'DISC15OFF', link: 'https://ibookingu5.myghs.com/demo' }
+        ]
+      },
+      {
+        id: 'legendary',
+        label: 'Legendary',
+        chance: 0.02,
+        color: '#f1c40f',
+        color2: '#e67e22',
+        icon: '🟡',
+        capsuleGrad: 'linear-gradient(135deg, #f39c12, #f1c40f)',
+        glowColor: 'rgba(241,196,15,0.5)',
+        prizes: [
+          { name: 'Room Voucher 500K', detail: 'Redeem at ibookingu5.myghs.com/demo', code: 'LUCKY500K', link: 'https://ibookingu5.myghs.com/demo' }
+        ]
+      }
+    ];
+
+    // ─────────────────────────────────────────
+    // STATE
+    // ─────────────────────────────────────────
+    const MAX_PULLS = 3;
+    let isAnimating = false;
+    let currentResult = null;
+    let capsuleReady = false;
+
+    function getTodayKey() {
+      return 'gacha_pulls_' + new Date().toISOString().slice(0, 10);
+    }
+    function getPullsUsedToday() {
+      return parseInt(localStorage.getItem(getTodayKey()) || '0', 10);
+    }
+    function incrementPullsUsed() {
+      const k = getTodayKey();
+      localStorage.setItem(k, getPullsUsedToday() + 1);
+    }
+    function getPullHistory() {
+      try { return JSON.parse(localStorage.getItem('gacha_history') || '[]'); }
+      catch { return []; }
+    }
+    function savePullHistory(h) {
+      localStorage.setItem('gacha_history', JSON.stringify(h.slice(0, 50)));
+    }
+    function getCollection() {
+      try { return JSON.parse(localStorage.getItem('gacha_collection') || '{}'); }
+      catch { return {}; }
+    }
+    function saveCollection(c) {
+      localStorage.setItem('gacha_collection', JSON.stringify(c));
+    }
+
+    // ─────────────────────────────────────────
+    // UI UPDATES
+    // ─────────────────────────────────────────
+    function updatePullCounter() {
+      const used = getPullsUsedToday();
+      const remaining = Math.max(0, MAX_PULLS - used);
+      document.getElementById('pullsLeft').textContent = remaining;
+      for (let i = 0; i < MAX_PULLS; i++) {
+        const pip = document.getElementById('pip' + i);
+        if (i < remaining) {
+          pip.classList.add('filled');
+        } else {
+          pip.classList.remove('filled');
+        }
+      }
+      const btn = document.getElementById('crankBtn');
+      if (remaining === 0) {
+        btn.disabled = true;
+        btn.textContent = 'Come back tomorrow!';
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = 'TURN CRANK &nbsp;&#x1F504;';
+      }
+    }
+
+    function renderHistory() {
+      const list = document.getElementById('historyList');
+      const history = getPullHistory();
+      if (history.length === 0) {
+        list.innerHTML = '<div class="empty-state" id="emptyHistory">No pulls yet — turn the crank!</div>';
+        return;
+      }
+      list.innerHTML = history.slice(0, 10).map(item => {
+        const r = RARITIES.find(x => x.id === item.rarityId) || RARITIES[0];
+        return `<div class="history-item border-${r.id}" style="border-left-color:${r.color}">
+          <div class="history-dot" style="background:${r.color}"></div>
+          <div class="history-rarity r-${r.id}">${r.label}</div>
+          <div class="history-prize">${item.prizeName}</div>
+          <div class="history-time">${item.time}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderCollection() {
+      const grid = document.getElementById('collectionGrid');
+      const col = getCollection();
+      const keys = Object.keys(col);
+      if (keys.length === 0) {
+        grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">No prizes collected yet!</div>';
+        return;
+      }
+      grid.innerHTML = keys.map(key => {
+        const item = col[key];
+        const r = RARITIES.find(x => x.id === item.rarityId) || RARITIES[0];
+        let codeHtml = item.code ? `<div class="c-code">${item.code}</div>` : '';
+        return `<div class="collection-card" style="border-color:${r.color}33">
+          <div class="c-rarity" style="color:${r.color}">${r.icon} ${r.label}</div>
+          <div class="c-prize">${item.prizeName}</div>
+          ${codeHtml}
+          <div class="c-count">x${item.count} earned</div>
+        </div>`;
+      }).join('');
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab-btn').forEach((b, i) => {
+        b.classList.toggle('active', (i === 0 && name === 'history') || (i === 1 && name === 'collection'));
+      });
+      document.getElementById('panel-history').classList.toggle('active', name === 'history');
+      document.getElementById('panel-collection').classList.toggle('active', name === 'collection');
+    }
+
+    // ─────────────────────────────────────────
+    // ROLL LOGIC
+    // ─────────────────────────────────────────
+    function rollRarity() {
+      const r = Math.random();
+      let cumulative = 0;
+      for (const rarity of RARITIES) {
+        cumulative += rarity.chance;
+        if (r < cumulative) return rarity;
+      }
+      return RARITIES[0];
+    }
+
+    function rollPrize(rarity) {
+      const prizes = rarity.prizes;
+      return prizes[Math.floor(Math.random() * prizes.length)];
+    }
+
+    // ─────────────────────────────────────────
+    // MAIN PULL FUNCTION
+    // ─────────────────────────────────────────
+    function doPull() {
+      if (isAnimating) return;
+      if (getPullsUsedToday() >= MAX_PULLS) return;
+
+      isAnimating = true;
+      capsuleReady = false;
+
+      const rarity = rollRarity();
+      const prize = rollPrize(rarity);
+      currentResult = { rarity, prize };
+
+      // Disable button during animation
+      const btn = document.getElementById('crankBtn');
+      btn.disabled = true;
+      btn.classList.add('pressed');
+
+      // Spin crank handle
+      const handle = document.getElementById('crankHandle');
+      handle.classList.add('spinning');
+
+      // Shake capsules in globe
+      const globeCaps = document.getElementById('globeCapsules');
+      globeCaps.classList.add('shaking');
+
+      // Hide/reset dropped capsule
+      const dc = document.getElementById('droppedCapsule');
+      dc.style.opacity = '0';
+      dc.classList.remove('drop-anim', 'wiggle', 'opening');
+
+      // After 1.5s: drop capsule
+      setTimeout(() => {
+        handle.classList.remove('spinning');
+        globeCaps.classList.remove('shaking');
+
+        // Style the capsule
+        const capTop = document.getElementById('capTop');
+        const capBot = document.getElementById('capBottom');
+        const capLabel = document.getElementById('capLabel');
+        const tapHint = document.getElementById('tapHint');
+
+        const halfGrad1 = rarity.capsuleGrad;
+        // Make top slightly lighter
+        capTop.style.background = halfGrad1;
+        capTop.style.borderRadius = '19px 19px 0 0';
+        capBot.style.background = halfGrad1;
+        capBot.style.borderRadius = '0 0 19px 19px';
+        capBot.style.filter = 'brightness(0.75)';
+
+        capLabel.textContent = rarity.label.toUpperCase();
+        tapHint.style.display = 'block';
+
+        dc.style.background = 'transparent';
+        dc.style.boxShadow = `0 4px 20px ${rarity.glowColor}, 0 0 0 2px ${rarity.color}44`;
+
+        // Drop animation
+        dc.classList.remove('drop-anim');
+        void dc.offsetWidth; // reflow
+        dc.classList.add('drop-anim');
+
+        // After drop completes, wiggle
+        setTimeout(() => {
+          dc.classList.add('wiggle');
+          capsuleReady = true;
+          isAnimating = false;
+
+          // Re-enable button
+          btn.disabled = false;
+          btn.classList.remove('pressed');
+          updatePullCounter();
+        }, 700);
+
+      }, 1500);
+
+      // Record pull immediately (use daily limit)
+      incrementPullsUsed();
+      updatePullCounter();
+
+      // Save to history & collection
+      const now = new Date();
+      const timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+
+      const history = getPullHistory();
+      history.unshift({
+        rarityId: rarity.id,
+        prizeName: prize.name,
+        code: prize.code,
+        time: timeStr
+      });
+      savePullHistory(history);
+
+      // Collection
+      const colKey = rarity.id + '_' + prize.name.replace(/\s+/g, '_');
+      const col = getCollection();
+      if (col[colKey]) {
+        col[colKey].count++;
+      } else {
+        col[colKey] = {
+          rarityId: rarity.id,
+          prizeName: prize.name,
+          code: prize.code,
+          count: 1
+        };
+      }
+      saveCollection(col);
+
+      renderHistory();
+      renderCollection();
+    }
+
+    // ─────────────────────────────────────────
+    // OPEN CAPSULE
+    // ─────────────────────────────────────────
+    function openCapsule() {
+      if (!capsuleReady || !currentResult) return;
+      if (isAnimating) return;
+
+      capsuleReady = false;
+      const dc = document.getElementById('droppedCapsule');
+      const tapHint = document.getElementById('tapHint');
+      tapHint.style.display = 'none';
+
+      // Open animation
+      dc.classList.add('opening');
+
+      setTimeout(() => {
+        showPrizePopup(currentResult.rarity, currentResult.prize);
+        // Reset capsule after popup
+        setTimeout(() => {
+          dc.style.opacity = '0';
+          dc.classList.remove('drop-anim', 'wiggle', 'opening');
+        }, 400);
+      }, 300);
+    }
+
+    // ─────────────────────────────────────────
+    // PRIZE POPUP
+    // ─────────────────────────────────────────
+    function showPrizePopup(rarity, prize) {
+      const overlay = document.getElementById('popupOverlay');
+      const box = document.getElementById('popupBox');
+
+      box.style.setProperty('--rarity-color', rarity.color);
+      box.style.setProperty('--rarity-color2', rarity.color2);
+      box.style.setProperty('--rarity-glow', rarity.glowColor);
+      box.style.borderColor = rarity.color + '66';
+
+      document.getElementById('popupIcon').textContent = rarity.icon;
+      document.getElementById('popupRarity').textContent = rarity.label.toUpperCase();
+      document.getElementById('popupRarity').style.color = rarity.color;
+      document.getElementById('popupRarity').style.textShadow = `0 0 12px ${rarity.color}`;
+      document.getElementById('popupPrizeName').textContent = prize.name;
+      document.getElementById('popupPrizeDetail').textContent = prize.detail;
+
+      const codeEl = document.getElementById('popupCode');
+      const linkEl = document.getElementById('popupLink');
+
+      if (prize.code) {
+        codeEl.textContent = prize.code;
+        codeEl.style.display = 'block';
+      } else {
+        codeEl.style.display = 'none';
+      }
+
+      if (prize.link) {
+        linkEl.href = prize.link;
+        linkEl.textContent = prize.link;
+        linkEl.style.display = 'block';
+      } else {
+        linkEl.style.display = 'none';
+      }
+
+      overlay.classList.add('visible');
+
+      // Legendary / Epic effects
+      if (rarity.id === 'legendary') {
+        triggerScreenFlash('#ffd700');
+        spawnConfetti(80, [rarity.color, rarity.color2, '#fff', '#ff6b9d', '#74b9ff']);
+      } else if (rarity.id === 'epic') {
+        triggerScreenFlash('#9b59b6');
+        spawnConfetti(40, [rarity.color, rarity.color2, '#fff']);
+      } else if (rarity.id === 'rare') {
+        spawnConfetti(20, [rarity.color, '#fff']);
+      }
+    }
+
+    function closePopup(event) {
+      if (event && event.target !== document.getElementById('popupOverlay')) return;
+      document.getElementById('popupOverlay').classList.remove('visible');
+    }
+
+    // ─────────────────────────────────────────
+    // SCREEN FLASH
+    // ─────────────────────────────────────────
+    function triggerScreenFlash(color) {
+      const el = document.getElementById('screenFlash');
+      el.style.background = color;
+      el.classList.remove('flash');
+      void el.offsetWidth;
+      el.classList.add('flash');
+    }
+
+    // ─────────────────────────────────────────
+    // CONFETTI
+    // ─────────────────────────────────────────
+    function spawnConfetti(count, colors) {
+      const container = document.getElementById('confettiContainer');
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+          const piece = document.createElement('div');
+          piece.className = 'confetti-piece';
+          const color = colors[Math.floor(Math.random() * colors.length)];
+          piece.style.left = Math.random() * 100 + 'vw';
+          piece.style.width = (6 + Math.random() * 8) + 'px';
+          piece.style.height = (6 + Math.random() * 8) + 'px';
+          piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+          piece.style.background = color;
+          const duration = 1.5 + Math.random() * 2;
+          piece.style.animationDuration = duration + 's';
+          piece.style.animationDelay = (Math.random() * 0.5) + 's';
+          container.appendChild(piece);
+          setTimeout(() => piece.remove(), (duration + 1) * 1000);
+        }, i * 20);
+      }
+    }
+
+    // ─────────────────────────────────────────
+    // INIT
+    // ─────────────────────────────────────────
+    function init() {
+      updatePullCounter();
+      renderHistory();
+      renderCollection();
+    }
+
+    init();
+  </script>
+</body>
+</html>
